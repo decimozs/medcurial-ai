@@ -1,0 +1,33 @@
+{
+  "name": "@medcurial/api",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "build": "bun build src/index.ts --outdir=dist",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --noEmit",
+    "generate": "bunx drizzle-kit generate",
+    "migrate": "bunx drizzle-kit migrate",
+    "push": "bunx drizzle-kit push",
+    "studio": "bunx drizzle-kit studio --port=3001"
+  },
+  "dependencies": {
+    "@hono/zod-validator": "^0.7.6",
+    "@neondatabase/serverless": "^1.0.2",
+    "bufferutil": "^4.1.0",
+    "drizzle-orm": "^0.45.1",
+    "drizzle-zod": "^0.8.3",
+    "hono": "^4.12.8",
+    "nanoid": "^5.1.7",
+    "postgres": "^3.4.8",
+    "ws": "^8.19.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.7",
+    "@types/bun": "latest",
+    "@types/ws": "^8.18.1",
+    "drizzle-kit": "^0.31.9"
+  }
+}

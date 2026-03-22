@@ -1,0 +1,105 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - AGENT_URL=http://agent:8001
+    depends_on:
+      agent:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/v1/signatures"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - ./api:/app
+      - /app/node_modules
+    networks:
+      - medcurial
+
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - API_URL=http://api:3000/api/v1
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - ROBOFLOW_API_KEY=${ROBOFLOW_API_KEY}
+      - ROBOFLOW_API_URL=${ROBOFLOW_API_URL}
+      - ROBOFLOW_WORKSPACE_NAME=${ROBOFLOW_WORKSPACE_NAME}
+      - ROBOFLOW_WORKSPACE_ID=${ROBOFLOW_WORKSPACE_ID}
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - ./worker:/app
+      - /app/.venv
+    networks:
+      - medcurial
+
+  agent:
+    build:
+      context: ./agent
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY}
+      - HF_TOKEN=${HF_TOKEN}
+      - HF_BASE_URL=${HF_BASE_URL}
+      - API_BASE_URL=http://api:3000/api/v1
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - ./agent:/app
+      - /app/.venv
+    networks:
+      - medcurial
+
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3000/api/v1
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5173/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - ./app:/app
+      - /app/node_modules
+    networks:
+      - medcurial
+
+networks:
+  medcurial:
+    driver: bridge

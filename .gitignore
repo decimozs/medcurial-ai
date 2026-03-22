@@ -1,0 +1,70 @@
+# =====================
+# Common / General
+# =====================
+.env
+.env.local
+.env.*.local
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+coverage/
+.cache/
+assets
+
+# =====================
+# IDE
+# =====================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# =====================
+# Database
+# =====================
+*.db
+*.sqlite
+*.sqlite3
+
+# =====================
+# Python
+# =====================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+worker/.venv/
+agent/.venv/
+mcp/.venv/
+
+# =====================
+# Python Linters / Tools
+# =====================
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
+# =====================
+# Docker
+# =====================
+*.dockerignore
+
+# =====================
+# Build outputs
+# =====================
+api/dist/
+app/dist/
+app/.nuxt/
+app/.output/
