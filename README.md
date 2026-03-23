@@ -2,6 +2,8 @@
 
 A signature verification system that uses AI to detect fraudulent signatures in medical documents. Built with a multi-service architecture.
 
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/1f86c990-89cb-48e1-88d9-0739b2f995fe" />
+
 ## Tech Stack
 
 | Service | Technology |
