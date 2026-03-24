@@ -1,4 +1,5 @@
 import asyncio
+import os
 from typing import Any
 
 import httpx
@@ -7,6 +8,13 @@ from app.exceptions import ExternalAPIError
 
 DEFAULT_TIMEOUT = httpx.Timeout(30.0, connect=10.0)
 MAX_RETRIES = 3
+
+
+def _get_worker_headers() -> dict[str, str]:
+    worker_key = os.getenv("WORKER_API_KEY")
+    if worker_key:
+        return {"X-Worker-Key": worker_key}
+    return {}
 
 
 async def save_to_api(
@@ -23,11 +31,14 @@ async def save_to_api(
         if status is not None:
             payload["status"] = status
 
+        headers = _get_worker_headers()
+
         for attempt in range(MAX_RETRIES):
             try:
                 response = await client.post(
                     f"{api_url}/signatures",
                     json=payload,
+                    headers=headers,
                 )
                 response.raise_for_status()
                 return response.json()
@@ -52,6 +63,8 @@ async def save_document_to_api(
     status: str = "processing",
 ) -> dict[str, Any]:
     async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        headers = _get_worker_headers()
+
         for attempt in range(MAX_RETRIES):
             try:
                 response = await client.post(
@@ -61,6 +74,7 @@ async def save_document_to_api(
                         "imageUrls": image_urls,
                         "status": status,
                     },
+                    headers=headers,
                 )
                 response.raise_for_status()
                 return response.json()
@@ -90,11 +104,14 @@ async def update_document_status(
         if extracted_text is not None:
             payload["extractedText"] = extracted_text
 
+        headers = _get_worker_headers()
+
         for attempt in range(MAX_RETRIES):
             try:
                 response = await client.put(
                     f"{api_url}/documents/{document_id}",
                     json=payload,
+                    headers=headers,
                 )
                 response.raise_for_status()
                 return response.json()
@@ -123,11 +140,14 @@ async def update_signature_status(
         if image_urls is not None:
             payload["imageUrls"] = image_urls
 
+        headers = _get_worker_headers()
+
         for attempt in range(MAX_RETRIES):
             try:
                 response = await client.put(
                     f"{api_url}/signatures/{signature_id}",
                     json=payload,
+                    headers=headers,
                 )
                 response.raise_for_status()
                 return response.json()

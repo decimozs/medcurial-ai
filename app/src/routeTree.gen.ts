@@ -9,7 +9,9 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SignaturesRouteImport } from './routes/signatures'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as EnrollmentRouteImport } from './routes/enrollment'
 import { Route as EnrollDocumentsRouteImport } from './routes/enroll-documents'
 import { Route as DocumentsRouteImport } from './routes/documents'
@@ -19,12 +21,24 @@ import { Route as SignaturesIndexRouteImport } from './routes/signatures/index'
 import { Route as DocumentsIndexRouteImport } from './routes/documents/index'
 import { Route as ChatIndexRouteImport } from './routes/chat/index'
 import { Route as SignaturesIdRouteImport } from './routes/signatures/$id'
+import { Route as FiuIdRouteImport } from './routes/fiu.$id'
 import { Route as DocumentsIdRouteImport } from './routes/documents/$id'
 import { Route as ChatIdRouteImport } from './routes/chat/$id'
+import { Route as CapIdRouteImport } from './routes/cap.$id'
 
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignaturesRoute = SignaturesRouteImport.update({
   id: '/signatures',
   path: '/signatures',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EnrollmentRoute = EnrollmentRouteImport.update({
@@ -72,6 +86,11 @@ const SignaturesIdRoute = SignaturesIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => SignaturesRoute,
 } as any)
+const FiuIdRoute = FiuIdRouteImport.update({
+  id: '/fiu/$id',
+  path: '/fiu/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DocumentsIdRoute = DocumentsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -82,6 +101,11 @@ const ChatIdRoute = ChatIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ChatRoute,
 } as any)
+const CapIdRoute = CapIdRouteImport.update({
+  id: '/cap/$id',
+  path: '/cap/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -89,9 +113,13 @@ export interface FileRoutesByFullPath {
   '/documents': typeof DocumentsRouteWithChildren
   '/enroll-documents': typeof EnrollDocumentsRoute
   '/enrollment': typeof EnrollmentRoute
+  '/login': typeof LoginRoute
   '/signatures': typeof SignaturesRouteWithChildren
+  '/signup': typeof SignupRoute
+  '/cap/$id': typeof CapIdRoute
   '/chat/$id': typeof ChatIdRoute
   '/documents/$id': typeof DocumentsIdRoute
+  '/fiu/$id': typeof FiuIdRoute
   '/signatures/$id': typeof SignaturesIdRoute
   '/chat/': typeof ChatIndexRoute
   '/documents/': typeof DocumentsIndexRoute
@@ -101,8 +129,12 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/enroll-documents': typeof EnrollDocumentsRoute
   '/enrollment': typeof EnrollmentRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/cap/$id': typeof CapIdRoute
   '/chat/$id': typeof ChatIdRoute
   '/documents/$id': typeof DocumentsIdRoute
+  '/fiu/$id': typeof FiuIdRoute
   '/signatures/$id': typeof SignaturesIdRoute
   '/chat': typeof ChatIndexRoute
   '/documents': typeof DocumentsIndexRoute
@@ -115,9 +147,13 @@ export interface FileRoutesById {
   '/documents': typeof DocumentsRouteWithChildren
   '/enroll-documents': typeof EnrollDocumentsRoute
   '/enrollment': typeof EnrollmentRoute
+  '/login': typeof LoginRoute
   '/signatures': typeof SignaturesRouteWithChildren
+  '/signup': typeof SignupRoute
+  '/cap/$id': typeof CapIdRoute
   '/chat/$id': typeof ChatIdRoute
   '/documents/$id': typeof DocumentsIdRoute
+  '/fiu/$id': typeof FiuIdRoute
   '/signatures/$id': typeof SignaturesIdRoute
   '/chat/': typeof ChatIndexRoute
   '/documents/': typeof DocumentsIndexRoute
@@ -131,9 +167,13 @@ export interface FileRouteTypes {
     | '/documents'
     | '/enroll-documents'
     | '/enrollment'
+    | '/login'
     | '/signatures'
+    | '/signup'
+    | '/cap/$id'
     | '/chat/$id'
     | '/documents/$id'
+    | '/fiu/$id'
     | '/signatures/$id'
     | '/chat/'
     | '/documents/'
@@ -143,8 +183,12 @@ export interface FileRouteTypes {
     | '/'
     | '/enroll-documents'
     | '/enrollment'
+    | '/login'
+    | '/signup'
+    | '/cap/$id'
     | '/chat/$id'
     | '/documents/$id'
+    | '/fiu/$id'
     | '/signatures/$id'
     | '/chat'
     | '/documents'
@@ -156,9 +200,13 @@ export interface FileRouteTypes {
     | '/documents'
     | '/enroll-documents'
     | '/enrollment'
+    | '/login'
     | '/signatures'
+    | '/signup'
+    | '/cap/$id'
     | '/chat/$id'
     | '/documents/$id'
+    | '/fiu/$id'
     | '/signatures/$id'
     | '/chat/'
     | '/documents/'
@@ -171,16 +219,34 @@ export interface RootRouteChildren {
   DocumentsRoute: typeof DocumentsRouteWithChildren
   EnrollDocumentsRoute: typeof EnrollDocumentsRoute
   EnrollmentRoute: typeof EnrollmentRoute
+  LoginRoute: typeof LoginRoute
   SignaturesRoute: typeof SignaturesRouteWithChildren
+  SignupRoute: typeof SignupRoute
+  CapIdRoute: typeof CapIdRoute
+  FiuIdRoute: typeof FiuIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signatures': {
       id: '/signatures'
       path: '/signatures'
       fullPath: '/signatures'
       preLoaderRoute: typeof SignaturesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/enrollment': {
@@ -246,6 +312,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignaturesIdRouteImport
       parentRoute: typeof SignaturesRoute
     }
+    '/fiu/$id': {
+      id: '/fiu/$id'
+      path: '/fiu/$id'
+      fullPath: '/fiu/$id'
+      preLoaderRoute: typeof FiuIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/documents/$id': {
       id: '/documents/$id'
       path: '/$id'
@@ -259,6 +332,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/chat/$id'
       preLoaderRoute: typeof ChatIdRouteImport
       parentRoute: typeof ChatRoute
+    }
+    '/cap/$id': {
+      id: '/cap/$id'
+      path: '/cap/$id'
+      fullPath: '/cap/$id'
+      preLoaderRoute: typeof CapIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -309,7 +389,11 @@ const rootRouteChildren: RootRouteChildren = {
   DocumentsRoute: DocumentsRouteWithChildren,
   EnrollDocumentsRoute: EnrollDocumentsRoute,
   EnrollmentRoute: EnrollmentRoute,
+  LoginRoute: LoginRoute,
   SignaturesRoute: SignaturesRouteWithChildren,
+  SignupRoute: SignupRoute,
+  CapIdRoute: CapIdRoute,
+  FiuIdRoute: FiuIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

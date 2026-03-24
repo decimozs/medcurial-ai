@@ -1,6 +1,9 @@
+import logging
 from typing import Any
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 
 async def analyze_document(
@@ -17,16 +20,27 @@ async def analyze_document(
         "inputs": {"image": {"type": "url", "value": image_url}},
     }
 
-    async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
-        response = await client.post(
-            endpoint,
-            json=payload,
-            headers={"Content-Type": "application/json"},
-        )
+    logger.info(f"Analyzing document with Roboflow: {endpoint}")
 
-        response.raise_for_status()
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
+            response = await client.post(
+                endpoint,
+                json=payload,
+                headers={"Content-Type": "application/json"},
+            )
 
-        if not response.text:
-            return {"error": "Empty response from Roboflow"}
+            if response.status_code != 200:
+                logger.error(f"Roboflow API error ({response.status_code}): {response.text}")
 
-        return response.json()
+            response.raise_for_status()
+
+            if not response.text:
+                logger.error("Empty response from Roboflow")
+                return {"error": "Empty response from Roboflow"}
+
+            logger.info("Successfully received analysis from Roboflow")
+            return response.json()
+    except Exception as e:
+        logger.exception(f"Exception during Roboflow analysis: {e}")
+        raise

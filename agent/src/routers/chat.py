@@ -10,8 +10,8 @@ from src.config import (
     create_chat_llm,
     create_fraud_llm,
 )
+from src.mcp_client import get_mcp_tools
 from src.prompts import CHATBOT_PROMPT, TITLE_PROMPT
-from src.tools import query_documents, query_signatures, get_fraud_summary
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -29,17 +29,7 @@ class ChatResponse(BaseModel):
     response: str
 
 
-async def _fetch_all_data() -> dict[str, Any]:
-    """Fetch all relevant data for the chat."""
-    documents = await query_documents(limit=20)
-    signatures = await query_signatures(limit=20)
-    fraud_summary = await get_fraud_summary()
-
-    return {
-        "documents": documents if isinstance(documents, list) else [],
-        "signatures": signatures if isinstance(signatures, list) else [],
-        "fraud_summary": fraud_summary,
-    }
+MAX_EXTRACTED_TEXT_CHARS = 4000
 
 
 def _build_document_context_str(doc_context: dict[str, Any] | None) -> str:
@@ -54,6 +44,10 @@ def _build_document_context_str(doc_context: dict[str, Any] | None) -> str:
 
     extracted_text = doc_context.get("extractedText")
     if extracted_text:
+        if len(extracted_text) > MAX_EXTRACTED_TEXT_CHARS:
+            extracted_text = (
+                extracted_text[:MAX_EXTRACTED_TEXT_CHARS] + "\n...[truncated]"
+            )
         parts.append(f"**Extracted Text:**\n{extracted_text}")
     else:
         parts.append("**Extracted Text:** No text extracted from this document.")
@@ -62,7 +56,20 @@ def _build_document_context_str(doc_context: dict[str, Any] | None) -> str:
     if fraud_analysis:
         import json
 
-        parts.append(f"**Fraud Analysis:**\n{json.dumps(fraud_analysis, indent=2)}")
+        # Only include the auditor summary, not the full nested JSON
+        auditor = (
+            fraud_analysis.get("auditor_response", {})
+            if isinstance(fraud_analysis, dict)
+            else {}
+        )
+        summary_parts = []
+        if auditor.get("is_flagged_for_review") is not None:
+            summary_parts.append(f"Flagged: {auditor['is_flagged_for_review']}")
+        if auditor.get("analysis_summary"):
+            summary_parts.append(f"Summary: {auditor['analysis_summary'][:500]}")
+        parts.append(
+            f"**Fraud Analysis:** {' | '.join(summary_parts) if summary_parts else json.dumps(fraud_analysis)[:500]}"
+        )
     else:
         parts.append(
             "**Fraud Analysis:** No fraud analysis available for this document."
@@ -81,26 +88,54 @@ async def chat(request: ChatRequest, x_llm_model: str | None = Header(None)):
         )
         llm = create_chat_llm(model)
 
-        context = await _fetch_all_data()
+        context_parts = []
 
-        context_parts = [f"## Global Context\n{context}"]
+        if request.documentContext:
+            doc_context_str = _build_document_context_str(request.documentContext)
+            context_parts.append(doc_context_str)
 
-        if request.documentContext or request.chatHistory:
-            if request.documentContext:
-                doc_context_str = _build_document_context_str(request.documentContext)
-                context_parts.append(doc_context_str)
-
-            if request.chatHistory:
-                context_parts.append(f"## Conversation History\n{request.chatHistory}")
+        if request.chatHistory:
+            context_parts.append(f"## Conversation History\n{request.chatHistory}")
 
         full_context = "\n\n".join(context_parts)
+        system_prompt = CHATBOT_PROMPT
+        if full_context:
+            system_prompt += f"\n\n{full_context}"
 
-        response = llm.invoke(
-            [
-                SystemMessage(content=CHATBOT_PROMPT),
-                HumanMessage(content=f"{full_context}\n\nQuestion: {request.message}"),
-            ]
-        )
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=request.message),
+        ]
+
+        try:
+            async with get_mcp_tools() as tools:
+                if tools:
+                    llm_with_tools = llm.bind_tools(tools)
+                else:
+                    llm_with_tools = llm
+
+                # Basic tool-calling loop
+                response = await llm_with_tools.ainvoke(messages)
+                messages.append(response)
+
+                while response.tool_calls:
+                    for tool_call in response.tool_calls:
+                        selected_tool = next((t for t in tools if t.name == tool_call["name"]), None)
+                        if selected_tool:
+                            tool_msg = await selected_tool.ainvoke(tool_call)
+                            messages.append(tool_msg)
+                        else:
+                            # Fallback if tool not found
+                            from langchain_core.messages import ToolMessage
+                            messages.append(ToolMessage(content="Tool not found", tool_call_id=tool_call["id"]))
+
+                    response = await llm_with_tools.ainvoke(messages)
+                    messages.append(response)
+
+        except Exception as tool_err:
+            print(f"MCP Tool error or connection failed: {tool_err}")
+            # Fallback to standard chat without tools
+            response = await llm.ainvoke(messages)
 
         content = response.content
         response_text = (

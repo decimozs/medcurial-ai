@@ -1,24 +1,38 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
-import { ArrowLeft } from 'lucide-react';
-import { DocumentEnrollmentForm } from '@/components/document-enrollment-form';
+import { createFileRoute, Link } from "@tanstack/react-router"
+import { ArrowLeft } from "lucide-react"
+import { DocumentEnrollmentForm } from "@/features/enroll-documents/components/document-enrollment-form"
 
-export const Route = createFileRoute('/enroll-documents')({
+import { authClient } from "@/lib/auth-client"
+import { redirect } from "@tanstack/react-router"
+
+export const Route = createFileRoute("/enroll-documents")({
+  beforeLoad: async () => {
+    const session = await authClient.getSession()
+    if (!session.data) {
+      throw redirect({
+        to: "/login",
+      })
+    }
+  },
   component: DocumentEnrollmentPage,
-});
+})
 
 function DocumentEnrollmentPage() {
   return (
-    <div className="container relative mx-auto py-10 px-4 min-h-screen flex flex-col items-center justify-center">
-      <div className="fixed top-8 left-8 sm:top-12 sm:left-12 z-50">
-        <Link to="/documents" className="inline-flex items-center text-[13px] font-semibold text-muted-foreground/60 hover:text-primary transition-colors">
+    <div className="relative container mx-auto flex min-h-screen flex-col items-center justify-center px-4 py-10">
+      <div className="fixed top-8 left-8 z-50 sm:top-12 sm:left-12">
+        <Link
+          to="/documents"
+          className="inline-flex items-center text-[13px] font-semibold text-muted-foreground/60 transition-colors hover:text-primary"
+        >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Registry
         </Link>
       </div>
 
-      <div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="w-full max-w-2xl animate-in duration-700 fade-in slide-in-from-bottom-4">
         <DocumentEnrollmentForm />
       </div>
     </div>
-  );
+  )
 }

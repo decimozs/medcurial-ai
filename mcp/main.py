@@ -1,7 +1,15 @@
 import os
+from pathlib import Path
 
 import httpx
+from dotenv import load_dotenv
 from fastmcp import FastMCP
+
+# Load API key out of api/.env or agent/.env, or fallback to current dir .env
+env_path = Path(__file__).parent.parent / "api" / ".env"
+load_dotenv(env_path)
+load_dotenv()  # also load local if any
+
 
 mcp = FastMCP(
     name="Medcurial MCP Server",
@@ -13,10 +21,15 @@ API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:3000/api/v1")
 DEFAULT_TIMEOUT = 30.0
 
 
-async def _make_request(url: str) -> dict:
+async def _make_request(url: str) -> dict | list:
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(url, timeout=DEFAULT_TIMEOUT)
+            headers = {}
+            worker_key = os.getenv("WORKER_API_KEY")
+            if worker_key:
+                headers["X-Worker-Key"] = worker_key
+
+            response = await client.get(url, timeout=DEFAULT_TIMEOUT, headers=headers)
             response.raise_for_status()
             return response.json()
         except httpx.ConnectError:
@@ -55,7 +68,10 @@ async def query_documents(
     if query_string:
         url += f"?{query_string}"
 
-    return await _make_request(url)
+    result = await _make_request(url)
+    if isinstance(result, list):
+        return {"documents": result}
+    return result
 
 
 @mcp.tool
@@ -116,8 +132,15 @@ async def query_signatures(
     if query_string:
         url += f"?{query_string}"
 
-    return await _make_request(url)
+    result = await _make_request(url)
+    if isinstance(result, list):
+        return {"signatures": result}
+    return result
 
 
 if __name__ == "__main__":
-    mcp.run()
+    import os
+
+    port = int(os.getenv("MCP_PORT", "8002"))
+    host = os.getenv("MCP_HOST", "0.0.0.0")
+    mcp.run(transport="sse", host=host, port=port)

@@ -5,7 +5,7 @@ import { RouterProvider, createRouter } from "@tanstack/react-router"
 import { NuqsAdapter } from "nuqs/adapters/react"
 
 import "./index.css"
-import { ThemeProvider } from "@/components/theme-provider.tsx"
+import { ThemeProvider } from "@/features/layout/components/theme-provider.tsx"
 
 // Import the generated route tree
 import { routeTree } from "./routeTree.gen"

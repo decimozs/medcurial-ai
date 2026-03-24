@@ -15,6 +15,7 @@
   "dependencies": {
     "@hono/zod-validator": "^0.7.6",
     "@neondatabase/serverless": "^1.0.2",
+    "better-auth": "^1.5.6",
     "bufferutil": "^4.1.0",
     "drizzle-orm": "^0.45.1",
     "drizzle-zod": "^0.8.3",

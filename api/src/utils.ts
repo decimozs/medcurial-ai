@@ -1,8 +1,10 @@
 import { zValidator as zv } from '@hono/zod-validator';
 import { serial, text, timestamp } from 'drizzle-orm/pg-core';
 import type { ValidationTargets } from 'hono';
+import { createFactory } from 'hono/factory';
 import { nanoid } from 'nanoid';
 import type { ZodObject, ZodSchema } from 'zod';
+import type { AppBindings } from './types';
 
 export const baseSchema = {
   id: text('id')
@@ -36,3 +38,7 @@ export const zValidator = <
       throw new Error(result.error.message);
     }
   });
+
+export const factory = createFactory<AppBindings>({
+  defaultAppOptions: { strict: false },
+});

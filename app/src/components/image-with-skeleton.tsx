@@ -1,24 +1,24 @@
-import { useState } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
+import { useState } from "react"
+import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/lib/utils"
 
 interface ImageWithSkeletonProps extends React.ImgHTMLAttributes<HTMLImageElement> {
-  containerClassName?: string;
+  containerClassName?: string
 }
 
-export function ImageWithSkeleton({ 
-  src, 
-  alt, 
-  className, 
+export function ImageWithSkeleton({
+  src,
+  alt,
+  className,
   containerClassName,
-  ...props 
+  ...props
 }: ImageWithSkeletonProps) {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true)
 
   return (
-    <div className={cn("relative w-full h-full", containerClassName)}>
+    <div className={cn("relative h-full w-full", containerClassName)}>
       {isLoading && (
-        <Skeleton className="absolute inset-0 w-full h-full rounded-inherit" />
+        <Skeleton className="rounded-inherit absolute inset-0 h-full w-full" />
       )}
       <img
         src={src}
@@ -32,5 +32,5 @@ export function ImageWithSkeleton({
         {...props}
       />
     </div>
-  );
+  )
 }

@@ -1,6 +1,7 @@
 .PHONY: dev dev-api dev-app dev-worker dev-agent dev-mcp install install-mcp clean
 
 dev:
+	(cd mcp && uv run fastmcp run main.py --transport sse --port 8002) & \
 	(cd api && bun run dev) & \
 	(cd worker && uv run fastapi dev) & \
 	(cd agent && uv run uvicorn src.main:app --reload --port 8001) & \
@@ -8,6 +9,7 @@ dev:
 	wait
 
 dev-infra:
+	(cd mcp && uv run fastmcp run main.py --transport sse --port 8002) & \
 	(cd api && bun run dev) & \
 	(cd worker && uv run fastapi dev) & \
 	(cd agent && uv run uvicorn src.main:app --reload --port 8001) & \
@@ -26,7 +28,7 @@ dev-agent:
 	cd agent && uv run uvicorn src.main:app --reload --port 8001
 
 dev-mcp:
-	cd mcp && uv run python main.py
+	cd mcp && uv run fastmcp run main.py --transport sse --port 8002
 
 install:
 	cd api && bun install

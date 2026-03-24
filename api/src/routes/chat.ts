@@ -1,14 +1,14 @@
 import { eq } from 'drizzle-orm';
-import { Hono } from 'hono';
 import { nanoid } from 'nanoid';
 import { AGENT_URL } from '@/constants';
 import { db } from '@/db';
+import { protectedRouteMiddleware } from '@/middlewares/protected';
 import {
   chatMessagesTable,
   chatSessionsTable,
   InsertMessageBodySchema,
 } from '@/schemas/chat';
-import { zValidator } from '@/utils';
+import { factory, zValidator } from '@/utils';
 
 function generateTitle(content: string): string {
   const maxLength = 50;
@@ -26,36 +26,63 @@ function buildChatHistory(messages: { role: string; content: string }[]) {
     .join('\n');
 }
 
-export const chatRoutes = new Hono()
-  .get('/', async (c) => {
+export const chatRoutes = factory
+  .createApp()
+  .get('/', protectedRouteMiddleware, async (c) => {
+    const user = c.get('user');
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+    const userId = user.id;
     const documentId = c.req.query('documentId');
 
     const sessions = await db.query.chatSessionsTable.findMany({
-      where: documentId
-        ? (item, { eq }) => eq(item.documentId, documentId)
-        : undefined,
+      where: (item, { eq, and }) => {
+        const userFilter = eq(item.userId, userId);
+        if (documentId) {
+          return and(userFilter, eq(item.documentId, documentId));
+        }
+        return userFilter;
+      },
       orderBy: (item, { desc }) => [desc(item.createdAt)],
     });
 
     return c.json(sessions);
   })
-  .get('/search', async (c) => {
+  .get('/search', protectedRouteMiddleware, async (c) => {
+    const user = c.get('user');
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+    const userId = user.id;
     const q = c.req.query('q');
     if (!q) return c.json({ sessions: [], messages: [] });
 
     try {
       const sessions = await db.query.chatSessionsTable.findMany({
-        where: (item, { ilike }) => ilike(item.title, `%${q}%`),
+        where: (item, { ilike, and, eq }) =>
+          and(ilike(item.title, `%${q}%`), eq(item.userId, userId)),
         limit: 5,
       });
 
-      const messages = await db.query.chatMessagesTable.findMany({
-        where: (item, { ilike }) => ilike(item.content, `%${q}%`),
-        limit: 10,
-        with: {
-          session: true,
-        },
-      });
+      const sessionIds = sessions.map((s) => s.id);
+      let messages: (typeof chatMessagesTable.$inferSelect & {
+        session?: typeof chatSessionsTable.$inferSelect;
+      })[] = [];
+
+      if (sessionIds.length > 0) {
+        messages = await db.query.chatMessagesTable.findMany({
+          where: (item, { ilike, inArray, and }) =>
+            and(
+              ilike(item.content, `%${q}%`),
+              inArray(item.sessionId, sessionIds)
+            ),
+          limit: 10,
+          with: {
+            session: true,
+          },
+        });
+      }
 
       return c.json({ sessions, messages });
     } catch (error) {
@@ -63,14 +90,26 @@ export const chatRoutes = new Hono()
       return c.json({ error: 'Failed to search chats' }, 500);
     }
   })
-  .get('/:id', async (c) => {
+  .get('/:id', protectedRouteMiddleware, async (c) => {
+    const user = c.get('user');
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+    const userId = user.id;
     const { id } = c.req.param();
 
     const session = await db.query.chatSessionsTable.findFirst({
       where: (item, { eq }) => eq(item.id, id),
+      with: {
+        document: true,
+      },
     });
 
     if (!session) {
+      return c.json({ error: 'Chat session not found' }, 404);
+    }
+
+    if (session.userId !== userId) {
       return c.json({ error: 'Chat session not found' }, 404);
     }
 
@@ -81,12 +120,17 @@ export const chatRoutes = new Hono()
 
     return c.json({ session, messages });
   })
-  .post('/', async (c) => {
+  .post('/', protectedRouteMiddleware, async (c) => {
+    const user = c.get('user');
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
     try {
       const body = await c.req.json().catch(() => ({}));
       const [session] = await db
         .insert(chatSessionsTable)
         .values({
+          userId: user.id,
           title: body.title || 'New Chat',
           documentId: body.documentId || null,
         })
@@ -104,8 +148,14 @@ export const chatRoutes = new Hono()
   })
   .post(
     '/:id/messages',
+    protectedRouteMiddleware,
     zValidator('json', InsertMessageBodySchema),
     async (c) => {
+      const user = c.get('user');
+      if (!user) {
+        return c.json({ error: 'Unauthorized' }, 401);
+      }
+      const userId = user.id;
       const { id } = c.req.param();
       const body = c.req.valid('json');
 
@@ -115,6 +165,10 @@ export const chatRoutes = new Hono()
         });
 
         if (!session) {
+          return c.json({ error: 'Chat session not found' }, 404);
+        }
+
+        if (session.userId !== userId) {
           return c.json({ error: 'Chat session not found' }, 404);
         }
 
@@ -160,7 +214,10 @@ export const chatRoutes = new Hono()
               documentContext = {
                 name: document.name,
                 extractedText: document.extractedText,
-                fraudAnalysis: document.fraudAnalysis as Record<string, unknown> | null,
+                fraudAnalysis: document.fraudAnalysis as Record<
+                  string,
+                  unknown
+                > | null,
               };
             }
           }
@@ -194,11 +251,14 @@ export const chatRoutes = new Hono()
                 agentData.response || agentData.message || '';
             } catch (jsonError) {
               console.error('Error parsing agent JSON:', jsonError);
-              assistantResponseText = 'Error: Received invalid response from AI agent.';
+              assistantResponseText =
+                'Error: Received invalid response from AI agent.';
             }
           } else {
             console.error('Agent response not ok:', agentResponse.status);
-            const errorText = await agentResponse.text().catch(() => 'No error body');
+            const errorText = await agentResponse
+              .text()
+              .catch(() => 'No error body');
             console.error('Agent error body:', errorText);
             assistantResponseText =
               'Sorry, I could not process your request at this time.';
@@ -258,14 +318,22 @@ export const chatRoutes = new Hono()
         return c.json(assistantMessage);
       } catch (error) {
         console.error('Error sending message:', error);
-        return c.json({ 
-          error: 'Failed to send message',
-          details: error instanceof Error ? error.message : String(error)
-        }, 500);
+        return c.json(
+          {
+            error: 'Failed to send message',
+            details: error instanceof Error ? error.message : String(error),
+          },
+          500
+        );
       }
     }
   )
-  .delete('/:id', async (c) => {
+  .delete('/:id', protectedRouteMiddleware, async (c) => {
+    const user = c.get('user');
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+    const userId = user.id;
     const { id } = c.req.param();
 
     try {
@@ -274,6 +342,10 @@ export const chatRoutes = new Hono()
       });
 
       if (!session) {
+        return c.json({ error: 'Chat session not found' }, 404);
+      }
+
+      if (session.userId !== userId) {
         return c.json({ error: 'Chat session not found' }, 404);
       }
 

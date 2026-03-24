@@ -57,6 +57,27 @@
       "when": 1774150007044,
       "tag": "0007_lame_joseph",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1774231640395,
+      "tag": "0008_mighty_ezekiel",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1774235364682,
+      "tag": "0009_pretty_glorian",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1774241221651,
+      "tag": "0010_fat_arachne",
+      "breakpoints": true
     }
   ]
 }

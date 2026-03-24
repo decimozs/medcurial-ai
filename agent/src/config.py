@@ -12,7 +12,8 @@ OLLAMA_BASE_URL = "https://ollama.com/v1"
 
 HF_TOKEN = os.getenv("HF_TOKEN")
 HF_BASE_URL = os.getenv("HF_BASE_URL")
-FRAUD_MODEL = "Qwen/Qwen2.5-1.5B-Instruct:featherless-ai"
+WORKER_API_KEY = os.getenv("WORKER_API_KEY")
+FRAUD_MODEL = "gemini-3-flash-preview:cloud"
 
 LLM_TIMEOUT = 120.0
 
@@ -29,9 +30,6 @@ DEFAULT_MODEL = "minimax-2.5"
 
 if not OLLAMA_API_KEY:
     raise ValueError("OLLAMA_API_KEY must be set in the .env file")
-
-if not HF_TOKEN or not HF_BASE_URL:
-    raise ValueError("HF_TOKEN and HF_BASE_URL must be set in the .env file")
 
 
 def create_chat_llm(model: str | None = None, **kwargs: Any) -> ChatOpenAI:
@@ -51,8 +49,8 @@ def create_chat_llm(model: str | None = None, **kwargs: Any) -> ChatOpenAI:
 def create_fraud_llm(**kwargs: Any) -> ChatOpenAI:
     return ChatOpenAI(
         model=FRAUD_MODEL,
-        api_key=HF_TOKEN,
-        base_url=HF_BASE_URL,
+        api_key=OLLAMA_API_KEY,
+        base_url=OLLAMA_BASE_URL,
         streaming=True,
         timeout=LLM_TIMEOUT,
         **kwargs,

@@ -1,9 +1,8 @@
-import { createRootRoute, Outlet } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/router-devtools'
-import { Toaster } from '@/components/ui/sonner'
-import { TooltipProvider } from '@/components/ui/tooltip'
-import { CommandMenu } from '@/components/command-menu'
-import { RecordingOverlay } from '@/components/recording-overlay'
+import { createRootRoute, Outlet } from "@tanstack/react-router"
+import { Toaster } from "@/components/ui/sonner"
+import { TooltipProvider } from "@/components/ui/tooltip"
+import { CommandMenu } from "@/features/layout/components/command-menu"
+import { RecordingOverlay } from "@/features/layout/components/recording-overlay"
 
 export const Route = createRootRoute({
   component: () => (
@@ -14,7 +13,6 @@ export const Route = createRootRoute({
       </main>
       <RecordingOverlay />
       <CommandMenu />
-      <TanStackRouterDevtools />
     </TooltipProvider>
   ),
 })

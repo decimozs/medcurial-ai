@@ -6,6 +6,6 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function stripExtension(name: string | undefined): string {
-  if (!name) return '';
-  return name.replace(/\.(jpg|jpeg|png|jfif|pdf|webp)$/i, '');
+  if (!name) return ""
+  return name.replace(/\.(jpg|jpeg|png|jfif|pdf|webp)$/i, "")
 }

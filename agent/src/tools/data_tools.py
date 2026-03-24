@@ -1,6 +1,6 @@
 import os
-
 import httpx
+from src.config import WORKER_API_KEY
 
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:3000/api/v1")
 
@@ -10,7 +10,11 @@ DEFAULT_TIMEOUT = 30.0
 async def _make_request(url: str) -> dict:
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(url, timeout=DEFAULT_TIMEOUT)
+            headers = {}
+            if WORKER_API_KEY:
+                headers["X-Worker-Key"] = WORKER_API_KEY
+
+            response = await client.get(url, timeout=DEFAULT_TIMEOUT, headers=headers)
             response.raise_for_status()
             return response.json()
         except httpx.ConnectError:

@@ -9,6 +9,7 @@ export const chatSessionsTable = pgTable('chat_sessions', {
   ...baseSchema,
   title: text('title').notNull(),
   documentId: text('document_id'),
+  userId: text('user_id').notNull(),
 });
 
 export const chatMessagesTable = pgTable('chat_messages', {
@@ -46,7 +47,9 @@ export const InsertChatSessionSchema = createInsertSchema(chatSessionsTable)
   .omit(excludedFields)
   .strict();
 
-export const InsertChatMessageSchema = createInsertSchema(chatMessagesTable).omit({
+export const InsertChatMessageSchema = createInsertSchema(
+  chatMessagesTable
+).omit({
   id: true,
   createdAt: true,
 });

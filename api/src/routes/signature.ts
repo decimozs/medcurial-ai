@@ -1,22 +1,23 @@
 import { eq } from 'drizzle-orm';
-import { Hono } from 'hono';
 import { db } from '@/db';
+import { protectedRouteMiddleware } from '@/middlewares/protected';
 import {
   InsertSignatureSchema,
   signaturesTable,
   UpdateSignatureSchema,
 } from '@/schemas';
-import { zValidator } from '@/utils';
+import { factory, zValidator } from '@/utils';
 
-export const signatureRoutes = new Hono()
-  .get('/', async (c) => {
+export const signatureRoutes = factory
+  .createApp()
+  .get('/', protectedRouteMiddleware, async (c) => {
     const data = await db.query.signaturesTable.findMany({
       orderBy: (item, { desc }) => [desc(item.createdAt)],
     });
 
     return c.json(data);
   })
-  .get('/:id', async (c) => {
+  .get('/:id', protectedRouteMiddleware, async (c) => {
     const { id } = c.req.param();
     const data = await db.query.signaturesTable.findFirst({
       where: (item, { eq }) => eq(item.id, id),
@@ -28,17 +29,26 @@ export const signatureRoutes = new Hono()
 
     return c.json(data);
   })
-  .post('/', zValidator('json', InsertSignatureSchema), async (c) => {
-    const body = c.req.valid('json');
-    try {
-      const [data] = await db.insert(signaturesTable).values(body).returning();
-      return c.json(data);
-    } catch (error) {
-      return c.json({ error: 'Failed to create signature' }, 500);
+  .post(
+    '/',
+    protectedRouteMiddleware,
+    zValidator('json', InsertSignatureSchema),
+    async (c) => {
+      const body = c.req.valid('json');
+      try {
+        const [data] = await db
+          .insert(signaturesTable)
+          .values(body)
+          .returning();
+        return c.json(data);
+      } catch (error) {
+        return c.json({ error: 'Failed to create signature' }, 500);
+      }
     }
-  })
+  )
   .put(
     '/:id',
+    protectedRouteMiddleware,
     zValidator('json', UpdateSignatureSchema.partial()),
     async (c) => {
       const { id } = c.req.param();
@@ -72,7 +82,7 @@ export const signatureRoutes = new Hono()
       }
     }
   )
-  .delete('/:id', async (c) => {
+  .delete('/:id', protectedRouteMiddleware, async (c) => {
     const { id } = c.req.param();
     try {
       await db.transaction(async (tx) => {
