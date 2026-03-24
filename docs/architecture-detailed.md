@@ -335,7 +335,7 @@ flowchart TB
         end
 
         subgraph Graph["LangGraph"]
-            Graph[graph.py]
+            Graph_File[graph.py]
             State[state.py]
             Nodes[_nodes/]
             Formatter[formatter.py]
@@ -356,11 +356,11 @@ flowchart TB
 
     Main --> Config_File
     Main --> Routers
-    Routers --> Graph
+    Routers --> Graph_File
     Routers --> Tools
-    Graph --> State
-    Graph --> Nodes
-    Graph --> Prompts_Mod
+    Graph_File --> State
+    Graph_File --> Nodes
+    Graph_File --> Prompts_Mod
     Nodes --> Config_File
     Routers --> Prompts_Mod
 ```
@@ -429,11 +429,11 @@ flowchart TB
     subgraph Agent_Service["Agent Service"]
         direction TB
         
-        subgraph Chat["Chat Endpoint"]
-            Chat[chat.py]
+        subgraph Chat_Endpoint["Chat Endpoint"]
+            Chat_File[chat.py]
         end
 
-        subgraph Analyze_Endpoint["Analyze Endpoint"]
+        subgraph Analyze_Endpoint_LLM["Analyze Endpoint"]
             Analyze[agent.py]
         end
 
@@ -451,7 +451,7 @@ flowchart TB
         FraudModel[Qwen2.5-1.5B]
     end
 
-    Chat --> Ollama
+    Chat_File --> Ollama
     Ollama --> Models
     
     Analyze --> HF
