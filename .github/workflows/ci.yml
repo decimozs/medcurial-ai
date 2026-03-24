@@ -1,0 +1,235 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs when a new run is triggered
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Determine which services need to be tested
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      worker: ${{ steps.filter.outputs.worker }}
+      agent: ${{ steps.filter.outputs.agent }}
+      mcp: ${{ steps.filter.outputs.mcp }}
+      app: ${{ steps.filter.outputs.app }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for changes
+        uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'api/**'
+              - '.github/workflows/ci.yml'
+            worker:
+              - 'worker/**'
+              - '.github/workflows/ci.yml'
+            agent:
+              - 'agent/**'
+              - '.github/workflows/ci.yml'
+            mcp:
+              - 'mcp/**'
+              - '.github/workflows/ci.yml'
+            app:
+              - 'app/**'
+              - '.github/workflows/ci.yml'
+
+  # API Service CI
+  api:
+    name: API (TypeScript)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: api
+        run: bun install
+
+      - name: Lint
+        working-directory: api
+        run: bun run lint
+
+      - name: Format check
+        working-directory: api
+        run: bun run format -- --check
+
+      - name: Typecheck
+        working-directory: api
+        run: bun run typecheck
+
+      - name: Run tests
+        working-directory: api
+        run: bun test
+
+  # Worker Service CI
+  worker:
+    name: Worker (Python)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.worker == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        working-directory: worker
+        run: uv sync
+
+      - name: Lint
+        working-directory: worker
+        run: uv run ruff check .
+
+      - name: Format check
+        working-directory: worker
+        run: uv run ruff format --check .
+
+      - name: Typecheck
+        working-directory: worker
+        run: uv run mypy .
+
+      - name: Run tests
+        working-directory: worker
+        run: uv run pytest
+
+  # Agent Service CI
+  agent:
+    name: Agent (Python)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.agent == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        working-directory: agent
+        run: uv sync
+
+      - name: Lint
+        working-directory: agent
+        run: uv run ruff check .
+
+      - name: Format check
+        working-directory: agent
+        run: uv run ruff format --check .
+
+      - name: Run tests
+        working-directory: agent
+        run: uv run pytest
+
+  # MCP Service CI
+  mcp:
+    name: MCP (Python)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.mcp == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        working-directory: mcp
+        run: uv sync
+
+      - name: Lint
+        working-directory: mcp
+        run: uv run ruff check .
+
+      - name: Format check
+        working-directory: mcp
+        run: uv run ruff format --check .
+
+  # App (Frontend) CI
+  app:
+    name: App (React)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.app == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: app
+        run: bun install
+
+      - name: Lint
+        working-directory: app
+        run: bun run lint
+
+      - name: Format check
+        working-directory: app
+        run: bun run format -- --check
+
+      - name: Typecheck
+        working-directory: app
+        run: bun run typecheck
+
+      - name: Build
+        working-directory: app
+        run: bun run build
+
+  # Summary when no changes detected
+  no-changes:
+    name: No Changes Detected
+    needs: detect-changes
+    if: |
+      needs.detect-changes.outputs.api != 'true' &&
+      needs.detect-changes.outputs.worker != 'true' &&
+      needs.detect-changes.outputs.agent != 'true' &&
+      needs.detect-changes.outputs.mcp != 'true' &&
+      needs.detect-changes.outputs.app != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: No service changes
+        run: echo "No changes detected in any service directory"
