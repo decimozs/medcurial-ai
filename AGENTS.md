@@ -9,6 +9,7 @@ This document provides guidelines for AI agents working on the Medcurial codebas
 - **Worker** (port 8000): Python FastAPI for image processing
 - **Agent** (port 8001): Python FastAPI + LangGraph for AI fraud detection
 - **App** (port 5173): React frontend with Vite + TanStack
+- **MCP** (port 8002): Python FastMCP for Model Context Protocol
 
 ## Development Commands
 
@@ -28,6 +29,7 @@ cd api && bun run dev           # Terminal 1
 cd worker && uv run fastapi dev app/  # Terminal 2
 cd agent && uv run uvicorn src.main:app --reload --port 8001  # Terminal 3
 cd app && bun run dev           # Terminal 4
+cd mcp && uv run fastmcp run main.py --transport sse --port 8002  # Terminal 5
 ```
 
 ## Verification Commands (ALWAYS RUN BEFORE COMPLETING WORK)
@@ -55,6 +57,11 @@ cd agent && uv run ruff check . && uv run ruff format --check .
 ### App
 ```bash
 cd app && bun run lint && bun run format && bun run typecheck
+```
+
+### MCP
+```bash
+cd mcp && uv run ruff check . && uv run ruff format --check .
 ```
 
 ## Code Style Guidelines
@@ -140,3 +147,4 @@ class ProcessingError(Exception):
 - **Supabase Storage:** signatures/reference/{name}/ and signatures/processed/{name}/{type}/
 - **LangGraph Workflow:** formatter → fraud_detector → ranking → auditor
 - **LLM Providers:** Ollama Cloud (chat), HuggingFace (fraud detection)
+- **MCP Service:** Uses FastMCP for Model Context Protocol integration
