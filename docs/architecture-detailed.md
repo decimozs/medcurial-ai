@@ -119,14 +119,15 @@ flowchart LR
     subgraph HTTP["HTTP Requests"]
         GET[GET]
         POST[POST]
-        PUT[PUT/PATCH]
+        PUT[PUT or PATCH]
         DELETE[DELETE]
     end
 
     subgraph Endpoints["API Endpoints"]
-        Sig[/signatures]
-        Doc [/documents]
-        Chat[/chat]
+        direction TB
+        Sig[signatures]
+        Doc[documents]
+        Chat[chat]
     end
 
     GET --> Sig
@@ -176,7 +177,7 @@ flowchart TB
         end
 
         subgraph Config["Configuration"]
-            Config[config.py]
+            Config_File[config.py]
             Exceptions[exceptions.py]
             Deps[dependencies.py]
         end
@@ -198,9 +199,9 @@ flowchart TB
         end
     end
 
-    Main --> Config
+    Main --> Config_File
     Main --> Routers
-    Config --> Exceptions
+    Config_File --> Exceptions
     Routers --> Schemas
     Routers --> Services
     Services --> Deps
@@ -325,7 +326,7 @@ flowchart TB
         end
 
         subgraph Config["Configuration"]
-            Config[config.py]
+            Config_File[config.py]
         end
 
         subgraph Routers["Routers"]
@@ -349,19 +350,19 @@ flowchart TB
         end
 
         subgraph Prompts["Prompts"]
-            Prompts[prompts/__init__.py]
+            Prompts_Mod[prompts/__init__.py]
         end
     end
 
-    Main --> Config
+    Main --> Config_File
     Main --> Routers
     Routers --> Graph
     Routers --> Tools
     Graph --> State
     Graph --> Nodes
-    Graph --> Prompts
-    Nodes --> Config
-    Routers --> Prompts
+    Graph --> Prompts_Mod
+    Nodes --> Config_File
+    Routers --> Prompts_Mod
 ```
 
 ### LangGraph Workflow
@@ -432,7 +433,7 @@ flowchart TB
             Chat[chat.py]
         end
 
-        subgraph Analyze["Analyze Endpoint"]
+        subgraph Analyze_Endpoint["Analyze Endpoint"]
             Analyze[agent.py]
         end
 
@@ -581,11 +582,11 @@ flowchart TB
     subgraph JSON["imageUrls Structure"]
         direction TB
         
-        Orig[original: string[]]
-        ROI[roi: string[]]
-        Norm[normalized: string[]]
-        Siam[siamese: string[]]
-        Preview[image_preview: string[]]
+        Orig["original: string array"]
+        ROI["roi: string array"]
+        Norm["normalized: string array"]
+        Siam["siamese: string array"]
+        Preview["image_preview: string array"]
     end
 
     Orig -->|"uploaded"| ROI
