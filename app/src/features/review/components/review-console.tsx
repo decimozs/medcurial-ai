@@ -8,9 +8,12 @@ import {
   CheckCircle2,
   Loader2,
   ChevronsUpDown,
+  Wand2,
 } from "lucide-react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { useMutation } from "@tanstack/react-query"
 import {
   Tooltip,
   TooltipContent,
@@ -53,6 +56,30 @@ export function ReviewConsole({
 }: ReviewConsoleProps) {
   const isPending = doc.approvalStatus === "pending"
   const isCompleted = doc.status === "completed"
+
+  const [enhancedNotes, setEnhancedNotes] = useState("")
+
+  const enhanceMutation = useMutation({
+    mutationFn: async (currentNotes: string) => {
+      const response = await fetch("http://localhost:8001/analyze/enhance-notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          notes: currentNotes,
+          document_context: JSON.stringify({
+            name: doc.name,
+            fraudAnalysis: doc.fraudAnalysis,
+          }),
+        }),
+      })
+      if (!response.ok) throw new Error("Failed to enhance notes")
+      const data = await response.json()
+      return data.enhanced_notes
+    },
+    onSuccess: (improvedNotes) => {
+      setEnhancedNotes(improvedNotes)
+    },
+  })
 
   if (!isCompleted) {
     return (
@@ -268,28 +295,96 @@ export function ReviewConsole({
 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="ml-1 text-[10px] font-bold tracking-widest text-muted-foreground/40 uppercase">
-                      Investigation Notes
-                    </label>
-                    <Textarea
-                      placeholder="Enter detailed findings, discrepancy notes, or justification for approval/rejection..."
-                      className="min-h-[200px] resize-none rounded-xl border-border/40 bg-accent/20 text-[13px] leading-relaxed font-medium focus:ring-primary/20"
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      disabled={!isPending}
-                    />
+                    <div className="flex items-center justify-between mx-1">
+                      <label className="text-[10px] font-bold tracking-widest text-muted-foreground/40 uppercase">
+                        Investigation Notes
+                      </label>
+                      {isPending && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-[10px] bg-primary/10 text-primary hover:bg-primary/20 transition-all font-semibold gap-1.5"
+                          disabled={enhanceMutation.isPending || !notes.trim()}
+                          onClick={() => enhanceMutation.mutate(notes)}
+                        >
+                          {enhanceMutation.isPending ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Wand2 className="h-3 w-3" />
+                          )}
+                          Enhance Notes
+                        </Button>
+                      )}
+                    </div>
+                    {!enhancedNotes ? (
+                      <Textarea
+                        placeholder="Enter detailed findings, discrepancy notes, or justification for approval/rejection..."
+                        className="min-h-[200px] resize-none rounded-xl border-border/40 bg-accent/20 text-[13px] leading-relaxed font-medium focus:ring-primary/20 disabled:opacity-50"
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        disabled={!isPending || enhanceMutation.isPending}
+                      />
+                    ) : (
+                      <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <div className="relative pt-2">
+                          <span className="absolute top-0 left-3 bg-background px-1 text-[9px] font-bold uppercase tracking-wider text-blue-500 rounded">
+                            Original Notes
+                          </span>
+                          <Textarea
+                            className="min-h-[100px] resize-none rounded-xl border-blue-500/30 bg-blue-500/5 text-[13px] leading-relaxed font-medium focus-visible:ring-0 shadow-sm"
+                            value={notes}
+                            readOnly
+                          />
+                        </div>
+                        <div className="flex justify-center -my-1 opacity-60">
+                          <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div className="relative pt-2">
+                          <span className="absolute top-0 left-3 bg-background px-1 text-[9px] font-bold uppercase tracking-wider text-primary rounded shadow-sm">
+                            AI Enhanced
+                          </span>
+                          <Textarea
+                            className="min-h-[140px] resize-none rounded-xl border-primary/40 bg-primary/5 text-[13px] leading-relaxed font-medium focus-visible:ring-0 shadow-[0_0_15px_rgba(var(--primary),0.08)]"
+                            value={enhancedNotes}
+                            onChange={(e) => setEnhancedNotes(e.target.value)}
+                          />
+                        </div>
+                        <div className="flex gap-2 justify-end mt-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setEnhancedNotes("")}
+                            className="text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            Discard AI Context
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            onClick={() => {
+                              setNotes(enhancedNotes)
+                              setEnhancedNotes("")
+                            }}
+                            className="text-xs bg-primary text-primary-foreground shadow-sm hover:scale-[1.02] transition-transform"
+                          >
+                            <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
+                            Use Enhanced Version
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {isPending ? (
                     <div className="grid grid-cols-2 gap-3 pt-2">
-                      <Button
+                       <Button
                         onClick={() =>
                           setConfirmDialog({ open: true, type: "reject" })
                         }
                         disabled={
                           rejectMutationPending ||
                           approveMutationPending ||
-                          !notes.trim()
+                          !notes.trim() ||
+                          enhanceMutation.isPending
                         }
                         variant="destructive"
                         className="h-12 rounded-xl text-[10px] font-bold tracking-widest uppercase"
@@ -304,7 +399,8 @@ export function ReviewConsole({
                         disabled={
                           approveMutationPending ||
                           rejectMutationPending ||
-                          !notes.trim()
+                          !notes.trim() ||
+                          enhanceMutation.isPending
                         }
                         className="h-12 rounded-xl bg-green-600 text-[10px] font-bold tracking-widest text-white uppercase hover:bg-green-700"
                       >
@@ -369,6 +465,7 @@ export function ReviewConsole({
           )}
         </div>
       )}
+
     </div>
   )
 }

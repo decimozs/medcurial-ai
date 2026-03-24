@@ -23,7 +23,9 @@ async def analyze_document(
     logger.info(f"Analyzing document with Roboflow: {endpoint}")
 
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(connect=30.0, read=300.0)
+        ) as client:
             response = await client.post(
                 endpoint,
                 json=payload,
@@ -31,7 +33,9 @@ async def analyze_document(
             )
 
             if response.status_code != 200:
-                logger.error(f"Roboflow API error ({response.status_code}): {response.text}")
+                logger.error(
+                    f"Roboflow API error ({response.status_code}): {response.text}"
+                )
 
             response.raise_for_status()
 

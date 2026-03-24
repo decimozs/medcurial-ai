@@ -2,6 +2,7 @@ from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException
 from langchain_core.messages import HumanMessage, SystemMessage
+from loguru import logger
 from pydantic import BaseModel
 
 from src.config import (
@@ -120,20 +121,28 @@ async def chat(request: ChatRequest, x_llm_model: str | None = Header(None)):
 
                 while response.tool_calls:
                     for tool_call in response.tool_calls:
-                        selected_tool = next((t for t in tools if t.name == tool_call["name"]), None)
+                        selected_tool = next(
+                            (t for t in tools if t.name == tool_call["name"]), None
+                        )
                         if selected_tool:
                             tool_msg = await selected_tool.ainvoke(tool_call)
                             messages.append(tool_msg)
                         else:
                             # Fallback if tool not found
                             from langchain_core.messages import ToolMessage
-                            messages.append(ToolMessage(content="Tool not found", tool_call_id=tool_call["id"]))
+
+                            messages.append(
+                                ToolMessage(
+                                    content="Tool not found",
+                                    tool_call_id=tool_call["id"],
+                                )
+                            )
 
                     response = await llm_with_tools.ainvoke(messages)
                     messages.append(response)
 
         except Exception as tool_err:
-            print(f"MCP Tool error or connection failed: {tool_err}")
+            logger.warning(f"MCP Tool error or connection failed: {tool_err}")
             # Fallback to standard chat without tools
             response = await llm.ainvoke(messages)
 

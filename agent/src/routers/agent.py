@@ -6,9 +6,11 @@ from typing import Any, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings
+from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.graph import agent
 from src.state import AgentState
+from src.config import create_chat_llm
 
 router = APIRouter(prefix="/analyze", tags=["analyze"])
 
@@ -36,6 +38,15 @@ class AnalyzeResponse(BaseModel):
     fraud_detector_response: dict[str, Any]
     ranking_response: dict[str, Any]
     auditor_response: dict[str, Any]
+
+
+class EnhanceNotesRequest(BaseModel):
+    notes: str
+    document_context: Optional[str] = None
+
+
+class EnhanceNotesResponse(BaseModel):
+    enhanced_notes: str
 
 
 def clean_json_response(text: str) -> str:
@@ -127,5 +138,34 @@ async def analyze(request: AnalyzeRequest):
         )
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/enhance-notes", response_model=EnhanceNotesResponse)
+async def enhance_notes(request: EnhanceNotesRequest):
+    try:
+        llm = create_chat_llm()
+        system_prompt = (
+            "You are an expert medical fraud investigator. "
+            "Rewrite the user's investigation notes to be professional, objective, clear, and concise. "
+            "CRITICAL RULES:\n"
+            "1. You MUST deeply rely on and maintain the exact factual meaning of the ORIGINAL NOTES provided.\n"
+            "2. DO NOT add any fictitious findings or facts not present in the original notes.\n"
+            "3. Your response MUST be strictly UNDER 300 CHARACTERS.\n"
+            "4. Return ONLY the finalized enhanced notes. Do not include introductory text, conversational padding, or markdown formatting."
+        )
+        if request.document_context:
+            system_prompt += f"\n\nHere is the context of the document being reviewed to help inform your paraphrasing:\n{request.document_context}"
+
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=f"Notes:\n{request.notes}"),
+        ]
+        response = await llm.ainvoke(messages)
+        content = response.content
+        if not isinstance(content, str):
+            content = str(content)
+        return EnhanceNotesResponse(enhanced_notes=content.strip())
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

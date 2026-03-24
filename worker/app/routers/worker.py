@@ -1,9 +1,8 @@
 import asyncio
 import json
-import logging
 from typing import Any, AsyncGenerator
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 from fastapi import APIRouter, Depends, File, status, UploadFile
 from fastapi.responses import StreamingResponse
@@ -134,7 +133,7 @@ async def process_single_document(
         yield result_event
 
     except Exception as e:
-        logger.exception(f"Failed processing document {document_url}: {e}")
+        logger.exception("Failed processing document {}: {}", document_url, e)
         if document_id:
             try:
                 await update_document_status(api_url, document_id, "failed")

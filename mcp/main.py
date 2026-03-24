@@ -1,14 +1,41 @@
 import os
+import sys
 from pathlib import Path
 
 import httpx
 from dotenv import load_dotenv
 from fastmcp import FastMCP
+from loguru import logger
 
-# Load API key out of api/.env or agent/.env, or fallback to current dir .env
 env_path = Path(__file__).parent.parent / "api" / ".env"
 load_dotenv(env_path)
-load_dotenv()  # also load local if any
+load_dotenv()
+
+
+def configure_logging() -> None:
+    log_level = os.getenv("LOG_LEVEL", "INFO")
+    log_format = os.getenv("LOG_FORMAT", "pretty")
+
+    logger.remove()
+
+    if log_format == "pretty":
+        logger.add(
+            sys.stderr,
+            format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
+            level=log_level,
+        )
+    else:
+        logger.add(
+            sys.stderr,
+            format="{time} | {level} | {name}:{function}:{line} - {message}",
+            level=log_level,
+            serialize=True,
+        )
+
+    logger.info(f"MCP Logging configured: level={log_level}, format={log_format}")
+
+
+configure_logging()
 
 
 mcp = FastMCP(
@@ -57,6 +84,9 @@ async def query_documents(
         limit: Maximum number of documents to return (default: 10)
         offset: Number of documents to skip (default: 0)
     """
+    logger.info(
+        f"query_documents called: status={status}, limit={limit}, offset={offset}"
+    )
     params = []
     if status:
         params.append(f"status={status}")
@@ -70,7 +100,9 @@ async def query_documents(
 
     result = await _make_request(url)
     if isinstance(result, list):
+        logger.info(f"query_documents returned {len(result)} documents")
         return {"documents": result}
+    logger.warning(f"query_documents returned error: {result}")
     return result
 
 
@@ -81,8 +113,14 @@ async def get_document(document_id: str) -> dict:
     Args:
         document_id: The unique identifier of the document
     """
+    logger.info(f"get_document called: document_id={document_id}")
     url = f"{API_BASE_URL}/documents/{document_id}"
-    return await _make_request(url)
+    result = await _make_request(url)
+    if "error" not in result:
+        logger.info(f"get_document returned: {document_id}")
+    else:
+        logger.warning(f"get_document error: {result}")
+    return result
 
 
 @mcp.tool
@@ -93,12 +131,15 @@ async def get_fraud_analysis(document_id: str) -> dict:
     Args:
         document_id: The unique identifier of the document
     """
+    logger.info(f"get_fraud_analysis called: document_id={document_id}")
     url = f"{API_BASE_URL}/documents/{document_id}"
     result = await _make_request(url)
 
     if "error" in result:
+        logger.warning(f"get_fraud_analysis error: {result}")
         return result
 
+    logger.info(f"get_fraud_analysis returned for: {document_id}")
     return {
         "id": result.get("id"),
         "name": result.get("name"),
@@ -121,6 +162,7 @@ async def query_signatures(
         limit: Maximum number of signatures to return (default: 10)
         offset: Number of signatures to skip (default: 0)
     """
+    logger.info(f"query_signatures called: name={name}, limit={limit}, offset={offset}")
     params = []
     if name:
         params.append(f"name={name}")
@@ -134,7 +176,9 @@ async def query_signatures(
 
     result = await _make_request(url)
     if isinstance(result, list):
+        logger.info(f"query_signatures returned {len(result)} signatures")
         return {"signatures": result}
+    logger.warning(f"query_signatures returned error: {result}")
     return result
 
 

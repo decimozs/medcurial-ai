@@ -3,17 +3,23 @@ from typing import Any, Dict
 
 import cv2
 import numpy as np
+from loguru import logger
+
+TARGET_SIZE = (220, 155)
 
 
 class SignatureProcessor:
     def __init__(self, image_bytes: bytes) -> None:
+        logger.debug("SignatureProcessor: initializing")
         self.raw_image: np.ndarray = self._decode(image_bytes)
 
     def _decode(self, image_bytes: bytes) -> np.ndarray:
         nparr = np.frombuffer(image_bytes, np.uint8)
         image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         if image is None:
+            logger.error("Could not decode image")
             raise ValueError("Could not decode image. Ensure valid format.")
+        logger.debug("Image decoded successfully")
         return image
 
     def _apply_grayscale(self, image: np.ndarray) -> np.ndarray:
@@ -61,9 +67,10 @@ class SignatureProcessor:
         return [c for c in contours if cv2.contourArea(c) > min_area_threshold]
 
     def _prepare_siamese(
-        self, image: np.ndarray, target_size: tuple[int, int] = (220, 155)
+        self, image: np.ndarray, target_size: tuple[int, int] = TARGET_SIZE
     ) -> np.ndarray:
         if image is None:
+            logger.error("Input image is None")
             raise ValueError("Input image is None.")
 
         h, w = image.shape[:2]
@@ -105,14 +112,17 @@ class SignatureProcessor:
         return visualization
 
     def process(self) -> Dict[str, str]:
+        logger.info("Starting signature processing pipeline")
         closing = self._run_pipeline(self.raw_image)
         valid_contours = self._extract_valid_contours(closing)
 
         try:
             roi = self.get_visualization()
             if roi is None or roi.size == 0:
+                logger.warning("ROI visualization empty, using raw image")
                 roi = self.raw_image
-        except Exception:
+        except Exception as e:
+            logger.warning("ROI visualization failed: {}", e)
             roi = self.raw_image
 
         normalized = siamese = image_preview = closing
@@ -129,6 +139,14 @@ class SignatureProcessor:
             normalized = self._prepare_siamese(roi_cropped)
             siamese = self._prepare_siamese(roi_cropped)
             image_preview = cv2.bitwise_not(siamese)
+            logger.info(
+                "Processing complete: {} contours found, ROI size {}x{}",
+                len(valid_contours),
+                x2 - x1,
+                y2 - y1,
+            )
+        else:
+            logger.warning("No valid contours found, using raw image")
 
         return {
             "roi": self._encode_image(roi),
