@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button"
 import { stripExtension } from "@/lib/utils"
 import type { DocumentResponse } from "../types"
 import { useNavigate } from "@tanstack/react-router"
+import { authClient } from "@/lib/auth-client"
+import { Info } from "lucide-react"
 
 interface DocumentHeaderProps {
   doc: DocumentResponse
@@ -19,6 +21,20 @@ interface DocumentHeaderProps {
 
 export function DocumentHeader({ doc, isFetching }: DocumentHeaderProps) {
   const navigate = useNavigate()
+  const session = authClient.useSession()
+  const userRole = session.data?.user?.role
+
+  const isFlagged =
+    doc.fraudAnalysis?.auditor_response?.is_flagged_for_review === true
+  const isInvestigationPending = isFlagged && doc.fiuStatus === "pending"
+
+  // Role Helpers
+  const isApprover = userRole === "claims-approval-user"
+  const isInvestigator = userRole === "fraud-investigation-user"
+
+  // UI Helpers
+  const canApproverReview = isApprover && !isInvestigationPending
+  const canInvestigatorReview = isInvestigator && isInvestigationPending
   const isProcessing = doc.status === "processing"
   const isFailed = doc.status === "failed"
 
@@ -81,26 +97,35 @@ export function DocumentHeader({ doc, isFetching }: DocumentHeaderProps) {
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        {doc.approvalStatus === "pending" && doc.status === "completed" && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 rounded-xl border-primary/20 bg-primary/5 px-4 text-[10px] font-bold tracking-widest text-primary uppercase shadow-sm transition-all hover:bg-primary/10"
-            onClick={() => {
-              const isFlagged =
-                doc.fraudAnalysis?.auditor_response?.is_flagged_for_review ===
-                true
-              navigate({
-                to: isFlagged ? "/fiu/$id" : "/cap/$id",
-                params: { id: doc.id },
-              })
-            }}
-          >
-            <ShieldCheck className="mr-2 h-3.5 w-3.5" />
-            Review Claim
-          </Button>
+      <div className="flex items-center gap-3">
+        {/* Investigation Banner for Approvers */}
+        {isApprover && isInvestigationPending && (
+          <div className="flex animate-in items-center gap-3 rounded-xl border border-orange-500/20 bg-orange-500/5 px-4 py-2 text-[10px] font-bold tracking-widest text-orange-600 uppercase shadow-sm fade-in slide-in-from-right-2">
+            <Info className="h-3.5 w-3.5" />
+            Claims is still on investigation
+          </div>
         )}
+
+        {/* Review Button Logic */}
+        {doc.approvalStatus === "pending" &&
+          doc.status === "completed" &&
+          doc.fraudAnalysis &&
+          (canApproverReview || canInvestigatorReview) && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 rounded-xl border-primary/20 bg-primary/5 px-4 text-[10px] font-bold tracking-widest text-primary uppercase shadow-sm transition-all hover:bg-primary/10"
+              onClick={() => {
+                navigate({
+                  to: isInvestigator ? "/fiu/$id" : "/cap/$id",
+                  params: { id: doc.id },
+                })
+              }}
+            >
+              <ShieldCheck className="mr-2 h-3.5 w-3.5" />
+              Review Claim
+            </Button>
+          )}
       </div>
     </div>
   )

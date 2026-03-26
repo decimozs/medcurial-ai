@@ -30,7 +30,11 @@ export function useChatSessions() {
     addChatExpandedGroup: addExpandedGroup,
   } = useAppStore()
 
-  const { data: sessions, isLoading } = useQuery<ChatSession[]>({
+  const {
+    data: sessions,
+    isLoading,
+    isFetching,
+  } = useQuery<ChatSession[]>({
     queryKey: ["chat-sessions"],
     queryFn: async () => {
       const response = await apiClient.fetch("/chat")
@@ -141,6 +145,7 @@ export function useChatSessions() {
     setExpandedGroups,
     sessions,
     isLoading,
+    isFetching,
     filteredSessions,
     groupedSessions,
     createSession,

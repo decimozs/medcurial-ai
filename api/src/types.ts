@@ -1,5 +1,5 @@
-import type { auth } from "./auth";
-import { type HonoLogLayerVariables } from "@loglayer/hono";
+import type { HonoLogLayerVariables } from '@loglayer/hono';
+import type { auth } from './auth';
 
 export interface AppBindings {
   Variables: {

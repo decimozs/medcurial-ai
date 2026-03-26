@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router"
+import { useQueryClient } from "@tanstack/react-query"
 import {
   Accordion,
   AccordionContent,
@@ -24,6 +25,7 @@ import {
   CheckCircle2,
   XCircle,
   HelpCircle,
+  RefreshCw,
 } from "lucide-react"
 import { useDocuments } from "../hooks/use-documents"
 import type { DocumentThumbnail } from "../hooks/use-documents"
@@ -40,6 +42,7 @@ import {
 
 export function DocumentSidebar() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const {
     activeId,
     search,
@@ -57,6 +60,7 @@ export function DocumentSidebar() {
     deleteOne,
     flatFilteredDocuments,
     groupedDocuments,
+    isFetching,
   } = useDocuments()
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
@@ -138,23 +142,25 @@ export function DocumentSidebar() {
               <Trash2 className="mr-2 h-3.5 w-3.5" />
               <span className="text-xs font-medium">Delete</span>
             </DropdownMenuItem>
-            {doc.status === "completed" && doc.approvalStatus === "pending" && (
-              <DropdownMenuItem
-                className="mx-1 cursor-pointer rounded-lg focus:bg-primary/10"
-                onClick={() => {
-                  const isFlagged =
-                    doc.fraudAnalysis?.auditor_response
-                      ?.is_flagged_for_review === true
-                  navigate({
-                    to: isFlagged ? "/fiu/$id" : "/cap/$id",
-                    params: { id: doc.id },
-                  })
-                }}
-              >
-                <ShieldCheck className="mr-2 h-3.5 w-3.5" />
-                <span className="text-xs font-medium">Review Claim</span>
-              </DropdownMenuItem>
-            )}
+            {doc.status === "completed" &&
+              doc.approvalStatus === "pending" &&
+              doc.fraudAnalysis && (
+                <DropdownMenuItem
+                  className="mx-1 cursor-pointer rounded-lg focus:bg-primary/10"
+                  onClick={() => {
+                    const isFlagged =
+                      doc.fraudAnalysis?.auditor_response
+                        ?.is_flagged_for_review === true
+                    navigate({
+                      to: isFlagged ? "/fiu/$id" : "/cap/$id",
+                      params: { id: doc.id },
+                    })
+                  }}
+                >
+                  <ShieldCheck className="mr-2 h-3.5 w-3.5" />
+                  <span className="text-xs font-medium">Review Claim</span>
+                </DropdownMenuItem>
+              )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -180,7 +186,7 @@ export function DocumentSidebar() {
         <div className="flex flex-col gap-4 p-4">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
                 <FileText className="h-4 w-4 text-primary" />
               </div>
               <span className="text-sm font-semibold tracking-tight text-foreground/80">
@@ -188,6 +194,18 @@ export function DocumentSidebar() {
               </span>
             </div>
             <div className="flex items-center gap-1">
+              <button
+                onClick={() =>
+                  queryClient.invalidateQueries({ queryKey: ["documents"] })
+                }
+                disabled={isFetching}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground/40 transition-all hover:bg-primary/5 hover:text-primary disabled:opacity-50"
+                title="Refresh Cache"
+              >
+                <RefreshCw
+                  className={cn("h-4 w-4", isFetching && "animate-spin")}
+                />
+              </button>
               <button
                 onClick={() =>
                   setSortOrder(sortOrder === "asc" ? "desc" : "asc")

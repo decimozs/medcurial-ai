@@ -1,5 +1,11 @@
 import { Link, useLocation } from "@tanstack/react-router"
-import { FileText, Fingerprint, MessageCircle, LogOut } from "lucide-react"
+import {
+  FileText,
+  Fingerprint,
+  MessageCircle,
+  LogOut,
+  LayoutList,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSidebar } from "@/features/layout/hooks/use-sidebar"
 import { authClient } from "@/lib/auth-client"
@@ -105,6 +111,13 @@ export function GlobalNav() {
         label="Signatures"
         active={pathname.startsWith("/signatures")}
         onClick={(e) => handleNavClick(e, pathname.startsWith("/signatures"))}
+      />
+      <NavItem
+        to="/tasks"
+        icon={<LayoutList className="h-4 w-4" />}
+        label="Tasks"
+        active={pathname.startsWith("/tasks")}
+        onClick={(e) => handleNavClick(e, pathname.startsWith("/tasks"))}
       />
       <NavItem
         to="/chat"

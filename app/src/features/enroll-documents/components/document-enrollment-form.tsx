@@ -97,15 +97,15 @@ export function DocumentEnrollmentForm() {
                   if (eventData.document_id && !firstDocumentId) {
                     firstDocumentId = eventData.document_id
                   }
+                  if (firstDocumentId && eventData.status === "completed") {
+                    reader.cancel()
+                    break
+                  }
                 } catch (e) {
                   console.error("Error parsing SSE data", e)
                 }
               }
             }
-          }
-          if (firstDocumentId) {
-            reader.cancel()
-            break
           }
         }
       }

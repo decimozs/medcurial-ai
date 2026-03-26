@@ -10,9 +10,11 @@ import {
   MessageSquare,
   History,
   Plus,
+  LayoutList,
 } from "lucide-react"
 import { useAppStore } from "@/lib/store"
 import { apiClient } from "@/lib/api-client"
+import { authClient } from "@/lib/auth-client"
 
 import {
   CommandDialog,
@@ -72,6 +74,11 @@ export function CommandMenu() {
   const { isCommandMenuOpen: open, setIsCommandMenuOpen: setOpen } =
     useAppStore()
   const navigate = useNavigate()
+  const session = authClient.useSession()
+  const userRole = (session.data?.user as any)?.role
+  const showTasks =
+    userRole === "claims-approval-user" ||
+    userRole === "fraud-investigation-user"
 
   const { data: documents } = useQuery<DocumentThumbnail[]>({
     queryKey: ["documents"],
@@ -156,6 +163,14 @@ export function CommandMenu() {
               <Users className="mr-2 h-4 w-4" />
               <span>Signatures Registry</span>
             </CommandItem>
+            {showTasks && (
+              <CommandItem
+                onSelect={() => runCommand(() => navigate({ to: "/tasks" }))}
+              >
+                <LayoutList className="mr-2 h-4 w-4" />
+                <span>Task Board</span>
+              </CommandItem>
+            )}
             <CommandItem
               onSelect={() =>
                 runCommand(async () => {

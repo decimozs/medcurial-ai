@@ -27,7 +27,7 @@ export function NotesComparisonDialog({
 }: NotesComparisonDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
+      <DialogContent className="flex max-h-[85vh] max-w-4xl flex-col">
         <DialogHeader>
           <DialogTitle className="text-xl">Review AI Enhancements</DialogTitle>
           <DialogDescription>
@@ -36,9 +36,9 @@ export function NotesComparisonDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 grid grid-cols-2 gap-4 my-4 min-h-0">
+        <div className="my-4 grid min-h-0 flex-1 grid-cols-2 gap-4">
           <div className="flex flex-col space-y-2">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 ml-1">
+            <h3 className="ml-1 text-xs font-bold tracking-widest text-muted-foreground/60 uppercase">
               Original Notes
             </h3>
             <ScrollArea className="flex-1 rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-sm leading-relaxed text-destructive/80">
@@ -47,7 +47,7 @@ export function NotesComparisonDialog({
           </div>
 
           <div className="flex flex-col space-y-2">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-primary/80 ml-1">
+            <h3 className="ml-1 text-xs font-bold tracking-widest text-primary/80 uppercase">
               Enhanced Version
             </h3>
             <ScrollArea className="flex-1 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm leading-relaxed text-foreground">
@@ -56,7 +56,7 @@ export function NotesComparisonDialog({
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0 mt-2">
+        <DialogFooter className="mt-2 gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             <X className="mr-2 h-4 w-4" />
             Discard Changes

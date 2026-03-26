@@ -28,7 +28,11 @@ export function useSignatures() {
     addSignatureExpandedGroup: addExpandedGroup,
   } = useAppStore()
 
-  const { data: signatures, isLoading } = useQuery<SignatureThumbnail[]>({
+  const {
+    data: signatures,
+    isLoading,
+    isFetching,
+  } = useQuery<SignatureThumbnail[]>({
     queryKey: ["signatures"],
     queryFn: async () => {
       const response = await apiClient.fetch("/signatures")
@@ -101,6 +105,7 @@ export function useSignatures() {
     setExpandedGroups,
     signatures,
     isLoading,
+    isFetching,
     filteredGroups,
     deleteTarget,
     setDeleteTarget,

@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { formatDistanceToNow } from "date-fns"
 import {
   BarChart2,
   MessageSquare,
@@ -16,6 +17,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { FraudAnalysisPanel } from "@/features/review/components/fraud-analysis-panel"
 import { DocumentChatPanel } from "@/features/documents/components/document-chat-panel"
 import type { DocumentResponse } from "../types"
@@ -55,7 +58,7 @@ export function DocumentSidePanel({
         {/* Panel Header w/ Tabs */}
         <div
           className={cn(
-            "flex shrink-0 items-center border-b border-border/40 bg-background/80 backdrop-blur-sm",
+            "flex w-full shrink-0 items-center border-b border-border/40 bg-background/80 backdrop-blur-sm",
             fraudPanelCollapsed ? "justify-center px-0 py-3" : "px-4 py-2"
           )}
         >
@@ -102,7 +105,8 @@ export function DocumentSidePanel({
                   <TooltipContent side="left">Assistant</TooltipContent>
                 </Tooltip>
 
-                {doc.approvalStatus !== "pending" && (
+                {(doc.fiuStatus !== "pending" ||
+                  doc.approvalStatus !== "pending") && (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
@@ -128,11 +132,11 @@ export function DocumentSidePanel({
           ) : (
             <>
               {!isProcessing && !isFailed && doc.fraudAnalysis ? (
-                <div className="flex gap-1 rounded-xl bg-muted/30 p-1">
+                <div className="flex flex-1 gap-1 rounded-xl bg-muted/30 p-1">
                   <button
                     onClick={() => setActiveRightTab("analysis")}
                     className={cn(
-                      "flex items-center gap-2 rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all",
+                      "flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all",
                       effectiveRightTab === "analysis"
                         ? "bg-background text-foreground shadow-sm ring-1 ring-border/20"
                         : "text-muted-foreground/50 hover:text-foreground"
@@ -144,7 +148,7 @@ export function DocumentSidePanel({
                   <button
                     onClick={() => setActiveRightTab("chat")}
                     className={cn(
-                      "flex items-center gap-2 rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all",
+                      "flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all",
                       effectiveRightTab === "chat"
                         ? "bg-background text-foreground shadow-sm ring-1 ring-border/20"
                         : "text-muted-foreground/50 hover:text-foreground"
@@ -153,11 +157,12 @@ export function DocumentSidePanel({
                     <MessageSquare className="h-3.5 w-3.5" />
                     Assistant
                   </button>
-                  {doc.approvalStatus !== "pending" && (
+                  {(doc.fiuStatus !== "pending" ||
+                    doc.approvalStatus !== "pending") && (
                     <button
                       onClick={() => setActiveRightTab("notes")}
                       className={cn(
-                        "flex items-center gap-2 rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all",
+                        "flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all",
                         effectiveRightTab === "notes"
                           ? "bg-background text-foreground shadow-sm ring-1 ring-border/20"
                           : "text-muted-foreground/50 hover:text-foreground"
@@ -169,26 +174,28 @@ export function DocumentSidePanel({
                   )}
                 </div>
               ) : (
-                <div className="flex animate-pulse items-center gap-2 rounded-lg px-1 py-1.5 text-[10px] font-bold tracking-wider text-primary/60 uppercase">
-                  {isProcessing ? (
-                    <>
-                      <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />{" "}
-                      Analyzing...
-                    </>
-                  ) : isFailed ? (
-                    <>
-                      <AlertCircle className="mr-1 h-3.5 w-3.5 text-destructive" />{" "}
-                      Analysis Failed
-                    </>
-                  ) : (
-                    <>
-                      <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />{" "}
-                      Initializing...
-                    </>
-                  )}
-                </div>
+                <>
+                  <div className="flex animate-pulse items-center gap-2 rounded-lg px-1 py-1.5 text-[10px] font-bold tracking-wider text-primary/60 uppercase">
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />{" "}
+                        Analyzing...
+                      </>
+                    ) : isFailed ? (
+                      <>
+                        <AlertCircle className="mr-1 h-3.5 w-3.5 text-destructive" />{" "}
+                        Analysis Failed
+                      </>
+                    ) : (
+                      <>
+                        <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />{" "}
+                        Initializing...
+                      </>
+                    )}
+                  </div>
+                  <div className="flex-1" />
+                </>
               )}
-              <div className="flex-1" />
               <button
                 onClick={() => setFraudPanelCollapsed(true)}
                 className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground/40 transition-all hover:bg-muted/60 hover:text-foreground"
@@ -265,23 +272,235 @@ export function DocumentSidePanel({
             ) : effectiveRightTab === "chat" ? (
               <DocumentChatPanel documentId={doc.id} documentName={doc.name} />
             ) : (
-              <div className="h-full space-y-6 overflow-y-auto p-6">
-                <section className="space-y-4 font-bold tracking-widest text-foreground/60 uppercase">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-primary" />
-                    <h2 className="text-xs font-bold tracking-widest text-foreground/60 uppercase">
-                      Review Notes
-                    </h2>
-                  </div>
-                  <div className="rounded-xl border border-border/40 bg-accent/20 p-5 shadow-inner">
-                    <p className="mb-2 px-1 text-[10px] font-bold tracking-widest text-muted-foreground/30 uppercase">
-                      Reviewer's Justification:
-                    </p>
-                    <div className="rounded-lg border border-border/10 bg-background/80 p-3 text-xs leading-relaxed text-foreground/60 italic shadow-sm">
-                      "{doc.approvalNotes || "No notes provided"}"
+              <div className="scrollbar-hide flex flex-1 flex-col overflow-x-hidden overflow-y-auto p-6">
+                {/* Findings Timeline */}
+                <div className="space-y-8">
+                  {/* Stage 1: FIU Investigation */}
+                  <section className="space-y-4">
+                    <div className="flex items-center justify-between px-1">
+                      <div className="flex items-center gap-2">
+                        <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
+                          <BarChart2 className="h-3.5 w-3.5" />
+                        </div>
+                        <h2 className="text-[10px] font-black tracking-widest text-foreground/60 uppercase">
+                          FIU Investigation
+                        </h2>
+                      </div>
+                      {doc.fiuStatus !== "pending" && (
+                        <Badge
+                          variant={
+                            doc.fiuStatus === "fraud"
+                              ? "destructive"
+                              : "success"
+                          }
+                          className="text-[9px] font-black tracking-tighter uppercase"
+                        >
+                          {doc.fiuStatus === "fraud"
+                            ? "Fraud Detected"
+                            : "Clear / Not Fraud"}
+                        </Badge>
+                      )}
                     </div>
-                  </div>
-                </section>
+
+                    <div className="space-y-3">
+                      {doc.findings
+                        ?.filter((f) => f.type === "fiu")
+                        .map((finding) => (
+                          <div
+                            key={finding.id}
+                            className="group relative rounded-2xl border border-border/40 bg-accent/5 p-4 transition-all hover:bg-accent/10"
+                          >
+                            <div className="mb-3 flex items-center justify-between">
+                              <div className="flex items-center gap-2.5">
+                                <Avatar className="h-7 w-7 border border-border/40 ring-1 ring-background">
+                                  <AvatarImage
+                                    src={finding.user.image || undefined}
+                                  />
+                                  <AvatarFallback className="bg-primary/10 text-[9px] font-bold text-primary">
+                                    {finding.user.name.charAt(0)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] font-bold text-foreground/80">
+                                    {finding.user.name}
+                                  </span>
+                                  <span className="text-[8px] font-medium text-muted-foreground/50">
+                                    {formatDistanceToNow(
+                                      new Date(finding.createdAt),
+                                      { addSuffix: true }
+                                    )}
+                                  </span>
+                                </div>
+                              </div>
+                              {finding.status && (
+                                <Badge
+                                  variant="outline"
+                                  className="h-4 px-1.5 text-[8px] font-bold tracking-tight text-muted-foreground/60 uppercase"
+                                >
+                                  {finding.status}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="rounded-xl border border-border/10 bg-background/60 p-3 text-[11px] leading-relaxed text-foreground/70 italic shadow-sm">
+                              "{finding.content}"
+                            </div>
+                          </div>
+                        ))}
+
+                      {doc.fiuStatus !== "pending" &&
+                        !doc.findings?.some((f) => f.type === "fiu") && (
+                          <div className="group relative rounded-2xl border border-border/40 bg-accent/5 p-4 opacity-70 transition-all hover:bg-accent/10">
+                            <div className="mb-3 flex items-center justify-between">
+                              <div className="flex items-center gap-2.5">
+                                <Avatar className="h-7 w-7 border border-border/40">
+                                  <AvatarFallback className="bg-primary/10 text-[9px] font-bold text-primary">
+                                    {doc.investigator?.name?.charAt(0) || "F"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] font-bold text-foreground/80">
+                                    {doc.investigator?.name ||
+                                      "Lead Investigator"}
+                                  </span>
+                                  <span className="text-[8px] font-medium text-muted-foreground/50">
+                                    Final Determination
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="rounded-xl border border-border/10 bg-background/60 p-3 text-[11px] leading-relaxed text-foreground/70 italic">
+                              "{doc.fiuNotes || "No notes provided."}"
+                            </div>
+                          </div>
+                        )}
+
+                      {doc.fiuStatus === "pending" &&
+                        !doc.findings?.some((f) => f.type === "fiu") && (
+                          <div className="flex h-20 items-center justify-center rounded-2xl border border-dashed border-border/40 bg-muted/5">
+                            <p className="text-[10px] font-medium text-muted-foreground/40">
+                              No FIU findings yet.
+                            </p>
+                          </div>
+                        )}
+                    </div>
+                  </section>
+
+                  {/* Stage 2: Claims Approval */}
+                  <section className="space-y-4">
+                    <div className="flex items-center justify-between px-1">
+                      <div className="flex items-center gap-2">
+                        <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
+                          <FileText className="h-3.5 w-3.5" />
+                        </div>
+                        <h2 className="text-[10px] font-black tracking-widest text-foreground/60 uppercase">
+                          Claims Approval
+                        </h2>
+                      </div>
+                      {doc.approvalStatus !== "pending" && (
+                        <Badge
+                          variant={
+                            doc.approvalStatus === "approved"
+                              ? "success"
+                              : "destructive"
+                          }
+                          className="text-[9px] font-black tracking-tighter uppercase"
+                        >
+                          {doc.approvalStatus}
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="space-y-3">
+                      {doc.findings
+                        ?.filter((f) => f.type === "cap")
+                        .map((finding) => (
+                          <div
+                            key={finding.id}
+                            className="group relative rounded-2xl border border-border/40 bg-accent/5 p-4 transition-all hover:bg-accent/10"
+                          >
+                            <div className="mb-3 flex items-center justify-between">
+                              <div className="flex items-center gap-2.5">
+                                <Avatar className="h-7 w-7 border border-border/40 ring-1 ring-background">
+                                  <AvatarImage
+                                    src={finding.user.image || undefined}
+                                  />
+                                  <AvatarFallback className="bg-primary/10 text-[9px] font-bold text-primary">
+                                    {finding.user.name.charAt(0)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] font-bold text-foreground/80">
+                                    {finding.user.name}
+                                  </span>
+                                  <span className="text-[8px] font-medium text-muted-foreground/50">
+                                    {formatDistanceToNow(
+                                      new Date(finding.createdAt),
+                                      { addSuffix: true }
+                                    )}
+                                  </span>
+                                </div>
+                              </div>
+                              {finding.status && (
+                                <Badge
+                                  variant="outline"
+                                  className="h-4 px-1.5 text-[8px] font-bold tracking-tight text-muted-foreground/60 uppercase"
+                                >
+                                  {finding.status}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="rounded-xl border border-border/10 bg-background/60 p-3 text-[11px] leading-relaxed text-foreground/70 italic shadow-sm">
+                              "{finding.content}"
+                            </div>
+                          </div>
+                        ))}
+
+                      {doc.approvalStatus !== "pending" &&
+                        !doc.findings?.some((f) => f.type === "cap") && (
+                          <div className="group relative rounded-2xl border border-border/40 bg-accent/5 p-4 opacity-70 transition-all hover:bg-accent/10">
+                            <div className="mb-3 flex items-center justify-between">
+                              <div className="flex items-center gap-2.5">
+                                <Avatar className="h-7 w-7 border border-border/40">
+                                  <AvatarFallback className="bg-primary/10 text-[9px] font-bold text-primary">
+                                    {(
+                                      doc.approver?.name ||
+                                      doc.rejector?.name ||
+                                      "C"
+                                    ).charAt(0)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] font-bold text-foreground/80">
+                                    {doc.approver?.name ||
+                                      doc.rejector?.name ||
+                                      "Lead Processor"}
+                                  </span>
+                                  <span className="text-[8px] font-medium text-muted-foreground/50">
+                                    Final Decision
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="rounded-xl border border-border/10 bg-background/60 p-3 text-[11px] leading-relaxed text-foreground/70 italic">
+                              "
+                              {doc.approvalNotes ||
+                                "No justification provided."}
+                              "
+                            </div>
+                          </div>
+                        )}
+
+                      {doc.approvalStatus === "pending" &&
+                        !doc.findings?.some((f) => f.type === "cap") && (
+                          <div className="flex h-20 items-center justify-center rounded-2xl border border-dashed border-border/40 bg-muted/5">
+                            <p className="text-[10px] font-medium text-muted-foreground/40">
+                              No CAP findings yet.
+                            </p>
+                          </div>
+                        )}
+                    </div>
+                  </section>
+                </div>
               </div>
             )}
           </div>

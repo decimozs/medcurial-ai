@@ -24,7 +24,7 @@ async def analyze_document(
 
     try:
         async with httpx.AsyncClient(
-            timeout=httpx.Timeout(connect=30.0, read=300.0)
+            timeout=httpx.Timeout(connect=30.0, read=300.0, write=30.0, pool=30.0)
         ) as client:
             response = await client.post(
                 endpoint,

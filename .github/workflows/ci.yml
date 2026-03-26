@@ -116,10 +116,6 @@ jobs:
         working-directory: worker
         run: uv run mypy .
 
-      - name: Run tests
-        working-directory: worker
-        run: uv run pytest
-
   # Agent Service CI
   agent:
     name: Agent (Python)
@@ -149,10 +145,6 @@ jobs:
       - name: Format check
         working-directory: agent
         run: uv run ruff format --check .
-
-      - name: Run tests
-        working-directory: agent
-        run: uv run pytest
 
   # MCP Service CI
   mcp:

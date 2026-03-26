@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router"
+import { useEffect, useMemo } from "react"
 import {
   Loader2,
   AlertCircle,
@@ -17,16 +18,49 @@ import { ReviewHeader } from "@/features/review/components/review-header"
 import { ReviewDocumentView } from "@/features/review/components/review-document-view"
 import { ReviewConsole } from "@/features/review/components/review-console"
 import { ReviewConfirmDialog } from "@/features/review/components/review-confirm-dialog"
+import { useReviewPresence } from "@/features/review/hooks/use-review-presence"
+import { useReviewFindings } from "@/features/review/hooks/use-review-findings"
 import { stripExtension } from "@/lib/utils"
 import { toast } from "sonner"
+import { authClient } from "@/lib/auth-client"
 
 export const Route = createFileRoute("/fiu/$id")({
+  beforeLoad: async () => {
+    const session = await authClient.getSession()
+    if (
+      !session.data ||
+      session.data.user.role !== "fraud-investigation-user"
+    ) {
+      throw redirect({
+        to: "/tasks",
+      })
+    }
+  },
   component: ClaimReviewPage,
 })
 
 function ClaimReviewPage() {
+  const navigate = useNavigate()
   const { id } = Route.useParams()
   const review = useClaimReview(id)
+  const session = authClient.useSession()
+
+  // Realtime Presence & Findings
+  const currentUser = useMemo(
+    () =>
+      session.data?.user
+        ? {
+            userId: session.data.user.id,
+            name: session.data.user.name,
+            image: session.data.user.image,
+            role: session.data.user.role,
+          }
+        : null,
+    [session.data?.user]
+  )
+
+  const { onlineUsers } = useReviewPresence(id, currentUser)
+  useReviewFindings(id)
 
   const {
     doc,
@@ -57,8 +91,18 @@ function ClaimReviewPage() {
     activeImageUrl,
     approveMutation,
     rejectMutation,
+    fiuDeterminationMutation,
+    notifyMutation,
+    addFindingMutation,
+    users,
     handleConfirmAction,
   } = review
+
+  useEffect(() => {
+    if (doc && doc.approvalStatus !== "pending") {
+      navigate({ to: "/documents/$id", params: { id: doc.id } })
+    }
+  }, [doc, navigate])
 
   const handleDownload = async () => {
     if (!activeImageUrl || !doc) return
@@ -108,6 +152,9 @@ function ClaimReviewPage() {
         doc={doc}
         isSendDialogOpen={isSendDialogOpen}
         setIsSendDialogOpen={setIsSendDialogOpen}
+        users={users}
+        notifyMutation={notifyMutation}
+        onlineUsers={onlineUsers}
         subtitle="Fraud Investigation Unit"
       />
 
@@ -203,7 +250,10 @@ function ClaimReviewPage() {
           setConfirmDialog={setConfirmDialog}
           approveMutationPending={approveMutation.isPending}
           rejectMutationPending={rejectMutation.isPending}
+          fiuMutationPending={fiuDeterminationMutation.isPending}
+          addFindingMutation={addFindingMutation}
           showChatTab={true}
+          unit="fiu"
         />
       </main>
 
@@ -217,7 +267,11 @@ function ClaimReviewPage() {
         confirmDialog={confirmDialog}
         setConfirmDialog={setConfirmDialog}
         handleConfirmAction={handleConfirmAction}
-        isLoading={approveMutation.isPending || rejectMutation.isPending}
+        isLoading={
+          approveMutation.isPending ||
+          rejectMutation.isPending ||
+          fiuDeterminationMutation.isPending
+        }
       />
     </div>
   )

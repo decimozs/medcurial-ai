@@ -6,7 +6,7 @@ import httpx
 
 from app.exceptions import ExternalAPIError
 
-DEFAULT_TIMEOUT = httpx.Timeout(30.0, connect=10.0)
+DEFAULT_TIMEOUT = httpx.Timeout(30.0, connect=10.0, write=10.0, pool=10.0)
 MAX_RETRIES = 3
 
 

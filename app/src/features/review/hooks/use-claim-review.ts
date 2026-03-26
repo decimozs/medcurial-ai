@@ -18,7 +18,7 @@ export function useClaimReview(id: string) {
   const [metadataOpen, setMetadataOpen] = useState(false)
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean
-    type: "approve" | "reject" | null
+    type: "approve" | "reject" | "mark_fraud" | "mark_not_fraud" | null
   }>({ open: false, type: null })
 
   // Panning state
@@ -129,11 +129,106 @@ export function useClaimReview(id: string) {
     },
   })
 
+  const fiuDeterminationMutation = useMutation({
+    mutationFn: async ({
+      status,
+      notes,
+    }: {
+      status: "fraud" | "not_fraud"
+      notes: string
+    }) => {
+      const response = await apiClient.fetch(
+        `/documents/${id}/fiu-determination`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ status, notes }),
+        }
+      )
+      if (!response.ok) {
+        const err = await response.json()
+        throw new Error(err.error || "Failed to update FIU determination")
+      }
+      return response.json()
+    },
+    onSuccess: (data) => {
+      toast.success(
+        `Investigation Completed: ${data.fiuStatus === "fraud" ? "Fraud Detected" : "Clear"}`
+      )
+      queryClient.invalidateQueries({ queryKey: ["document", id] })
+      queryClient.invalidateQueries({ queryKey: ["documents"] })
+      setConfirmDialog({ open: false, type: null })
+      navigate({ to: "/documents/$id", params: { id } })
+    },
+    onError: (err: Error) => {
+      toast.error(err.message)
+    },
+  })
+
+  const { data: users = [] } = useQuery<
+    { id: string; name: string; role: string; image: string | null }[]
+  >({
+    queryKey: ["users"],
+    queryFn: async () => {
+      const response = await apiClient.fetch("/users")
+      if (!response.ok) throw new Error("Failed to fetch users")
+      return response.json()
+    },
+  })
+
+  const notifyMutation = useMutation({
+    mutationFn: async (userIds: string[]) => {
+      const response = await apiClient.fetch(`/documents/${id}/notify`, {
+        method: "POST",
+        body: JSON.stringify({ userIds }),
+      })
+      if (!response.ok) {
+        const err = await response.json()
+        throw new Error(err.error || "Failed to send notifications")
+      }
+      return response.json()
+    },
+    onSuccess: () => {
+      toast.success("Review notifications sent to teammates")
+      setIsSendDialogOpen(false)
+    },
+    onError: (err: Error) => {
+      toast.error(err.message)
+    },
+  })
+
+  const addFindingMutation = useMutation({
+    mutationFn: async (finding: {
+      content: string
+      type: "fiu" | "cap"
+      status?: string
+    }) => {
+      const response = await apiClient.fetch(`/documents/${id}/findings`, {
+        method: "POST",
+        body: JSON.stringify(finding),
+      })
+      if (!response.ok) {
+        const err = await response.json()
+        throw new Error(err.error || "Failed to add finding")
+      }
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["document", id] })
+    },
+    onError: (err: Error) => {
+      toast.error(err.message)
+    },
+  })
+
   const handleConfirmAction = () => {
     if (confirmDialog.type === "approve") {
       approveMutation.mutate(notes)
     } else if (confirmDialog.type === "reject") {
       rejectMutation.mutate(notes)
+    } else if (confirmDialog.type === "mark_fraud") {
+      fiuDeterminationMutation.mutate({ status: "fraud", notes })
+    } else if (confirmDialog.type === "mark_not_fraud") {
+      fiuDeterminationMutation.mutate({ status: "not_fraud", notes })
     }
   }
 
@@ -180,6 +275,10 @@ export function useClaimReview(id: string) {
     activeImageUrl,
     approveMutation,
     rejectMutation,
+    fiuDeterminationMutation,
+    notifyMutation,
+    addFindingMutation,
+    users,
     handleConfirmAction,
   }
 }

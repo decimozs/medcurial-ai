@@ -21,6 +21,38 @@ export interface DocumentResponse {
     signature_extraction?: string
   }
   fraudAnalysis?: FraudAnalysis
+  fiuStatus: "pending" | "fraud" | "not_fraud"
+  fiuNotes?: string | null
+  fiuInvestigatedAt?: string | null
+  fiuInvestigatedBy?: string | null
+  investigator?: {
+    id: string
+    name: string
+    image?: string | null
+  } | null
+  approver?: {
+    id: string
+    name: string
+    image?: string | null
+  } | null
+  rejector?: {
+    id: string
+    name: string
+    image?: string | null
+  } | null
+  findings?: Array<{
+    id: string
+    content: string
+    type: "fiu" | "cap"
+    status?: string | null
+    createdAt: string
+    user: {
+      id: string
+      name: string
+      image?: string | null
+      role?: string | null
+    }
+  }>
 }
 
 export type ViewMode = "original" | "text" | "signature"

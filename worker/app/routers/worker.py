@@ -164,7 +164,6 @@ async def document_analysis(
     supabase_client: Client = Depends(get_supabase_client),
     api_url: str = Depends(get_api_url),
 ):
-    logger.info(f"Starting document analysis for {len(files)} files")
     settings = get_settings()
 
     image_bytes_list: list[bytes] = []

@@ -80,7 +80,7 @@ export function SignupForm() {
             Full Name
           </Label>
           <div className="group relative">
-            <User className="absolute top-3 left-3 h-4 w-4 text-muted-foreground/40 transition-colors group-focus-within:text-primary" />
+            <User className="absolute top-4 left-3 h-4 w-4 text-muted-foreground/40 transition-colors group-focus-within:text-primary" />
             <Input
               id="name"
               placeholder="Dr. Julian Moore"
@@ -108,7 +108,7 @@ export function SignupForm() {
             Email Address
           </Label>
           <div className="group relative">
-            <Mail className="absolute top-3 left-3 h-4 w-4 text-muted-foreground/40 transition-colors group-focus-within:text-primary" />
+            <Mail className="absolute top-4 left-3 h-4 w-4 text-muted-foreground/40 transition-colors group-focus-within:text-primary" />
             <Input
               id="email"
               placeholder="name@hospital.com"
@@ -137,7 +137,7 @@ export function SignupForm() {
             Password
           </Label>
           <div className="group relative">
-            <Lock className="absolute top-3 left-3 h-4 w-4 text-muted-foreground/40 transition-colors group-focus-within:text-primary" />
+            <Lock className="absolute top-4 left-3 h-4 w-4 text-muted-foreground/40 transition-colors group-focus-within:text-primary" />
             <Input
               id="password"
               placeholder="••••••••"

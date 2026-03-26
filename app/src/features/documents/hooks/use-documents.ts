@@ -20,6 +20,7 @@ export interface DocumentThumbnail {
   approvalStatus: "pending" | "approved" | "rejected"
   extractedText?: string
   fraudAnalysis?: FraudAnalysis
+  fiuStatus: "pending" | "fraud" | "not_fraud"
 }
 
 export function useDocuments() {
@@ -47,7 +48,11 @@ export function useDocuments() {
     addDocumentExpandedGroup: addExpandedGroup,
   } = useAppStore()
 
-  const { data: documents, isLoading } = useQuery<DocumentThumbnail[]>({
+  const {
+    data: documents,
+    isLoading,
+    isFetching,
+  } = useQuery<DocumentThumbnail[]>({
     queryKey: ["documents"],
     queryFn: async () => {
       const response = await apiClient.fetch("/documents")
@@ -156,6 +161,7 @@ export function useDocuments() {
     setExpandedGroups,
     documents,
     isLoading,
+    isFetching,
     deleteTarget,
     setDeleteTarget,
     deleteOne,

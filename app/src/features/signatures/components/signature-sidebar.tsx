@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router"
+import { useQueryClient } from "@tanstack/react-query"
 import {
   Accordion,
   AccordionContent,
@@ -13,6 +14,7 @@ import {
   ArrowDownAZ,
   ArrowUpZA,
   UserPlus,
+  RefreshCw,
 } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
@@ -20,8 +22,10 @@ import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 import { useSignatures } from "../hooks/use-signatures"
 import { SignatureItem } from "./signature-item"
 import type { SignatureThumbnail } from "../types"
+import { cn } from "@/lib/utils"
 
 export function SignatureSidebar() {
+  const queryClient = useQueryClient()
   const {
     activeId,
     search,
@@ -36,6 +40,7 @@ export function SignatureSidebar() {
     deleteTarget,
     setDeleteTarget,
     deleteOne,
+    isFetching,
   } = useSignatures()
 
   return (
@@ -53,7 +58,7 @@ export function SignatureSidebar() {
         <div className="flex flex-col gap-4 p-4">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
                 <Fingerprint className="h-4 w-4 text-primary" />
               </div>
               <span className="text-sm font-semibold tracking-tight text-foreground/80">
@@ -61,6 +66,18 @@ export function SignatureSidebar() {
               </span>
             </div>
             <div className="flex items-center gap-1">
+              <button
+                onClick={() =>
+                  queryClient.invalidateQueries({ queryKey: ["signatures"] })
+                }
+                disabled={isFetching}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground/40 transition-all hover:bg-primary/5 hover:text-primary disabled:opacity-50"
+                title="Refresh Cache"
+              >
+                <RefreshCw
+                  className={cn("h-4 w-4", isFetching && "animate-spin")}
+                />
+              </button>
               <button
                 onClick={() =>
                   setSortOrder(sortOrder === "asc" ? "desc" : "asc")

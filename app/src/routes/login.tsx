@@ -30,7 +30,7 @@ function LoginPage() {
         </div>
 
         <div className="relative z-10 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl border-primary/20 bg-primary/10">
+          <div className="flex h-10 w-10 items-center justify-center rounded-md border-primary/20 bg-primary/10">
             <ShieldCheck className="h-5 w-5 text-primary" />
           </div>
           <span className="text-xl font-bold tracking-tight text-foreground/90">
