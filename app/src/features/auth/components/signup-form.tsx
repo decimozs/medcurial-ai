@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
+import { Link } from "@tanstack/react-router"
 
 const signupSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -174,13 +175,16 @@ export function SignupForm() {
       </form>
 
       <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-border/40" />
-        </div>
-        <div className="relative flex justify-center text-[10px] font-bold tracking-widest uppercase">
-          <span className="bg-background px-2 text-muted-foreground/40">
-            Registry Enrollment
+        <div className="flex items-center justify-center gap-2 text-sm font-medium">
+          <span className="text-muted-foreground">
+            Already have an account?
           </span>
+          <Link
+            to="/login"
+            className="font-semibold text-primary underline-offset-4 hover:underline"
+          >
+            Sign In
+          </Link>
         </div>
       </div>
     </div>

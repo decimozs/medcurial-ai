@@ -53,7 +53,7 @@ function ClaimReviewPage() {
             role: session.data.user.role,
           }
         : null,
-    [session.data?.user]
+    [session.data]
   )
 
   const { onlineUsers } = useReviewPresence(id, currentUser)

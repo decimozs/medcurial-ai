@@ -114,7 +114,7 @@ def process_file(file_path: str, timeout: Optional[int] = None) -> dict[str, Any
 
 - **Variables/functions**: `snake_case` (e.g., `get_settings`, `api_url`)
 - **Classes**: `PascalCase` (e.g., `Settings`, `WorkerException`)
-- **Constants**: `UPPER_SNAKE_CASE` (e.g., `API_URL`, `MAX_RETRIES`)
+- **Constants**: `UPPER_SNAKE_CASE` (e.g., `API_BASE_URL`, `MAX_RETRIES`)
 - **Files**: `snake_case.py` (e.g., `config.py`, `exceptions.py`)
 
 ### Error Handling
@@ -163,7 +163,7 @@ app/
 - Provide sensible defaults only when safe to do so
 
 Required environment variables:
-- `API_URL` - External API URL for saving signature metadata (e.g., `http://localhost:3000/api/v1`)
+- `API_BASE_URL` - External API URL for saving signature metadata (e.g., `http://localhost:3000/api/v1`)
 - `SUPABASE_URL` - Supabase project URL
 - `SUPABASE_KEY` - Supabase anon/public key
 

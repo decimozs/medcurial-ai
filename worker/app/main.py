@@ -1,13 +1,17 @@
 import os
 import sys
 
+import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
+from supabase import create_client
 
 from app.config import get_settings
 from app.exceptions import WorkerException
+from app.middlewares.rate_limit import RateLimitMiddleware
+from app.middlewares.security import SecurityHeadersMiddleware
 from app.routers.worker import enroll_signature_router
 
 
@@ -50,6 +54,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RateLimitMiddleware, max_requests=20, window_seconds=60)
+
 
 @app.exception_handler(WorkerException)
 async def worker_exception_handler(request: Request, exc: WorkerException):
@@ -62,10 +69,23 @@ async def worker_exception_handler(request: Request, exc: WorkerException):
 @app.get("/health")
 async def health_check():
     settings = get_settings()
-    return {
-        "status": "healthy",
-        "api_url": settings.api_url,
-    }
+    deps: dict[str, str] = {}
+
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(f"{settings.api_base_url}/health", timeout=5)
+        deps["api"] = "ok" if r.is_success else "error"
+    except Exception:
+        deps["api"] = "unreachable"
+
+    try:
+        sb = create_client(settings.supabase_url, settings.supabase_key)
+        sb.storage.list_buckets()
+        deps["supabase"] = "ok"
+    except Exception:
+        deps["supabase"] = "error"
+
+    return {"status": "healthy", "api_url": settings.api_base_url, **deps}
 
 
 app.include_router(enroll_signature_router)

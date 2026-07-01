@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
+import { Link } from "@tanstack/react-router"
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -97,12 +98,6 @@ export function LoginForm() {
             >
               Password
             </Label>
-            <button
-              type="button"
-              className="text-[11px] font-semibold text-primary underline-offset-4 hover:underline"
-            >
-              Forgot password?
-            </button>
           </div>
           <div className="group relative">
             <Lock className="absolute top-4 left-3 h-4 w-4 text-muted-foreground/40 transition-colors group-focus-within:text-primary" />
@@ -142,13 +137,14 @@ export function LoginForm() {
       </form>
 
       <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-border/40" />
-        </div>
-        <div className="relative flex justify-center text-[10px] font-bold tracking-widest uppercase">
-          <span className="bg-background px-2 text-muted-foreground/40">
-            Secure Authentication
-          </span>
+        <div className="flex items-center justify-center gap-2 text-sm font-medium">
+          <span className="text-muted-foreground">New to Medcurial?</span>
+          <Link
+            to="/signup"
+            className="font-semibold text-primary underline-offset-4 hover:underline"
+          >
+            Request Access
+          </Link>
         </div>
       </div>
     </div>

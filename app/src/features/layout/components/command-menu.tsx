@@ -75,7 +75,7 @@ export function CommandMenu() {
     useAppStore()
   const navigate = useNavigate()
   const session = authClient.useSession()
-  const userRole = (session.data?.user as any)?.role
+  const userRole = session.data?.user?.role
   const showTasks =
     userRole === "claims-approval-user" ||
     userRole === "fraud-investigation-user"

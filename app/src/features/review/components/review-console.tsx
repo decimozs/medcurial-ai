@@ -15,7 +15,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
+
 import { useMutation } from "@tanstack/react-query"
 import {
   Tooltip,
@@ -26,7 +26,6 @@ import {
 import { FraudAnalysisPanel } from "@/features/review/components/fraud-analysis-panel"
 import { DocumentChatPanel } from "@/features/documents/components/document-chat-panel"
 import type { DocumentResponse, RightTab } from "../types"
-import { authClient } from "@/lib/auth-client"
 import { formatDistanceToNow } from "date-fns"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
@@ -78,8 +77,6 @@ export function ReviewConsole({
       ? true // Allow multiple determinations in FIU route
       : doc.approvalStatus === "pending"
   const isCompleted = doc.status === "completed"
-  const session = authClient.useSession()
-  const userName = session.data?.user?.name || "Investigator"
 
   const [enhancedNotes, setEnhancedNotes] = useState("")
 

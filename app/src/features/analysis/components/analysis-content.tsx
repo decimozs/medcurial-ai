@@ -204,8 +204,8 @@ export function AnalysisContent({
               />
             )}
             {detector.assessment && (
-              <div className="rounded-lg border border-destructive/10 bg-destructive/5 p-3">
-                <div className="text-sm leading-relaxed font-medium text-destructive/80">
+              <div className="rounded-lg border border-border bg-muted/50 p-3">
+                <div className="text-sm leading-relaxed font-medium text-foreground">
                   <SafeRender value={detector.assessment} />
                 </div>
               </div>

@@ -2,7 +2,6 @@ import {
   ShieldCheck,
   Calendar,
   Hash,
-  Trash2,
   Clock,
   ExternalLink,
   ChevronRight,

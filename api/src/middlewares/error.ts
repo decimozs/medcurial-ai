@@ -1,5 +1,7 @@
 import type { Context, Next } from 'hono';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 export async function errorMiddleware(c: Context, next: Next) {
   try {
     await next();
@@ -10,11 +12,11 @@ export async function errorMiddleware(c: Context, next: Next) {
 
     console.error('Error:', error);
 
-    return c.json(
-      {
-        error: error instanceof Error ? error.message : 'Internal Server Error',
-      },
-      500
-    );
+    const message =
+      error instanceof Error && !isProduction
+        ? error.message
+        : 'Internal Server Error';
+
+    return c.json({ error: message }, 500);
   }
 }

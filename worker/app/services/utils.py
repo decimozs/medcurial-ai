@@ -1,18 +1,50 @@
 import asyncio
 from typing import Any
 
+import cv2
+import numpy as np
 from fastapi import UploadFile
 from supabase import Client
 
-from app.exceptions import InvalidFileTypeError
+from app.config import get_settings
+from app.exceptions import (
+    FileSizeExceededError,
+    ImageDimensionsExceededError,
+    InvalidFileTypeError,
+)
 from app.services.signature_processor import SignatureProcessor
 from app.services.storage import upload_original_images
+
+MAX_WIDTH = 8000
+MAX_HEIGHT = 8000
 
 
 async def validate_image(file: UploadFile) -> bytes:
     if not file.content_type or not file.content_type.startswith("image/"):
         raise InvalidFileTypeError()
-    return await file.read()
+
+    settings = get_settings()
+    max_bytes = settings.max_upload_size_mb * 1024 * 1024
+    data = await file.read()
+
+    if len(data) > max_bytes:
+        raise FileSizeExceededError(settings.max_upload_size_mb)
+
+    _validate_image_dimensions(data)
+
+    return data
+
+
+def _validate_image_dimensions(data: bytes) -> None:
+    arr = np.frombuffer(data, np.uint8)
+    img = cv2.imdecode(arr, cv2.IMREAD_UNCHANGED)
+    if img is None:
+        raise ImageDimensionsExceededError("Failed to decode image")
+    height, width = img.shape[:2]
+    if width > MAX_WIDTH or height > MAX_HEIGHT:
+        raise ImageDimensionsExceededError(
+            f"Image dimensions {width}x{height} exceed max {MAX_WIDTH}x{MAX_HEIGHT}"
+        )
 
 
 async def validate_images(

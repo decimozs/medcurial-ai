@@ -7,6 +7,17 @@
   <link rel="apple-touch-icon" href="/logo.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline';
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' data: https://*.supabase.co;
+    font-src 'self' data:;
+    connect-src 'self' http://localhost:3000 ws://localhost:3000;
+    frame-ancestors 'none';
+    base-uri 'self';
+  ">
+
   <!-- Primary Meta Tags -->
   <title>Medcurial AI - Neural Signature Verification & Document Analysis</title>
   <meta name="title" content="Medcurial AI - Neural Signature Verification & Document Analysis" />

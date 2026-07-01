@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import { bodyLimit } from 'hono/body-limit';
 import { db } from '@/db';
 import { protectedRouteMiddleware } from '@/middlewares/protected';
 import {
@@ -32,6 +33,7 @@ export const signatureRoutes = factory
   .post(
     '/',
     protectedRouteMiddleware,
+    bodyLimit({ maxSize: 1024 * 1024 }),
     zValidator('json', InsertSignatureSchema),
     async (c) => {
       const body = c.req.valid('json');
@@ -49,6 +51,7 @@ export const signatureRoutes = factory
   .put(
     '/:id',
     protectedRouteMiddleware,
+    bodyLimit({ maxSize: 1024 * 1024 }),
     zValidator('json', UpdateSignatureSchema.partial()),
     async (c) => {
       const { id } = c.req.param();

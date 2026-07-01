@@ -1,6 +1,16 @@
+const DEFAULT_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+
+function parseOrigins(raw: string | undefined): string[] {
+  if (!raw) return DEFAULT_ORIGINS;
+  return raw
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+}
+
 export const APP_CONFIG = {
   cors: {
-    origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin: parseOrigins(process.env.ALLOWED_ORIGINS),
     allowMethods: ['POST', 'GET', 'OPTIONS', 'PATCH', 'DELETE', 'PUT'] as const,
     maxAge: 600,
     credentials: true,
@@ -17,7 +27,5 @@ export const WEBHOOK_URL = process.env.WEBHOOK_URL || '';
 export const WEBHOOK_EMAIL = process.env.WEBHOOK_EMAIL || '';
 export const APP_URL = process.env.APP_URL || 'http://localhost:5173';
 
-export const SUPABASE_URL =
-  process.env.SUPABASE_URL || 'https://hyzaxowpeumvtkfhtdds.supabase.co';
-export const SUPABASE_KEY =
-  process.env.SUPABASE_KEY || 'sb_publishable_JXFrJ3W7YSK45ymCWN6jAw_Y_0Ts6L9';
+export const SUPABASE_URL = process.env.SUPABASE_URL || '';
+export const SUPABASE_KEY = process.env.SUPABASE_KEY || '';

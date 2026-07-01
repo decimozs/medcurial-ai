@@ -9,8 +9,8 @@ from fastapi.responses import StreamingResponse
 from supabase import Client
 
 from app.config import get_settings
-from app.dependencies import get_api_url, get_supabase_client
-from app.exceptions import ExternalAPIError
+from app.dependencies import get_api_base_url, get_supabase_client
+from app.exceptions import ExternalAPIError, TooManyFilesError
 from app.services.storage import IMAGE_TYPES, upload_base64_image, upload_documents
 from app.services.api_client import (
     save_to_api,
@@ -162,9 +162,12 @@ async def document_analysis(
         ..., description="The document image files to be analyzed"
     ),
     supabase_client: Client = Depends(get_supabase_client),
-    api_url: str = Depends(get_api_url),
+    api_url: str = Depends(get_api_base_url),
 ):
     settings = get_settings()
+
+    if len(files) > settings.max_upload_count:
+        raise TooManyFilesError(settings.max_upload_count)
 
     image_bytes_list: list[bytes] = []
     content_types: list[str] = []
@@ -343,9 +346,13 @@ async def enroll_signature(
         ..., description="The signature image files to be processed"
     ),
     supabase_client: Client = Depends(get_supabase_client),
-    api_url: str = Depends(get_api_url),
+    api_url: str = Depends(get_api_base_url),
 ):
     from app.services.storage import upload_original_image
+
+    settings = get_settings()
+    if len(files) > settings.max_upload_count:
+        raise TooManyFilesError(settings.max_upload_count)
 
     image_bytes_list: list[bytes] = []
     original_urls: list[str] = []

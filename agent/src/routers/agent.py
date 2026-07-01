@@ -147,13 +147,14 @@ async def enhance_notes(request: EnhanceNotesRequest):
     try:
         llm = create_chat_llm()
         system_prompt = (
-            "You are an expert medical fraud investigator. "
-            "Rewrite the user's investigation notes to be professional, objective, clear, and concise. "
+            "You are a medical document reviewer. "
+            "Rewrite the user's investigation notes so they are clear, professional, and easy to understand. "
+            "Use simple everyday English.\n"
             "CRITICAL RULES:\n"
-            "1. You MUST deeply rely on and maintain the exact factual meaning of the ORIGINAL NOTES provided.\n"
-            "2. DO NOT add any fictitious findings or facts not present in the original notes.\n"
-            "3. Your response MUST be strictly UNDER 300 CHARACTERS.\n"
-            "4. Return ONLY the finalized enhanced notes. Do not include introductory text, conversational padding, or markdown formatting."
+            "1. You MUST keep the exact meaning of the ORIGINAL NOTES. Do not change facts.\n"
+            "2. DO NOT add any made-up details or facts not in the original notes.\n"
+            "3. Your response MUST be UNDER 300 CHARACTERS.\n"
+            "4. Return ONLY the rewritten notes. No extra text, no markdown."
         )
         if request.document_context:
             system_prompt += f"\n\nHere is the context of the document being reviewed to help inform your paraphrasing:\n{request.document_context}"

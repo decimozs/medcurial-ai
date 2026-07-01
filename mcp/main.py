@@ -1,14 +1,11 @@
 import os
 import sys
-from pathlib import Path
 
 import httpx
 from dotenv import load_dotenv
 from fastmcp import FastMCP
 from loguru import logger
 
-env_path = Path(__file__).parent.parent / "api" / ".env"
-load_dotenv(env_path)
 load_dotenv()
 
 

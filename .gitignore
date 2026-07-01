@@ -63,8 +63,18 @@ mcp/.venv/
 
 # =====================
 # Build outputs
-# =====================
 api/dist/
 app/dist/
 app/.nuxt/
 app/.output/
+
+# =====================
+# OpenCode (agent tools)
+# =====================
+.agents/
+skills-lock.json
+
+# =====================
+# Transient
+# =====================
+app/lint_output.txt

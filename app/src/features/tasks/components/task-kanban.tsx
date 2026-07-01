@@ -7,7 +7,7 @@ import { Loader2, AlertCircle } from "lucide-react"
 export function TaskKanban() {
   const { documents, isLoading } = useDocuments()
   const session = authClient.useSession()
-  const userRole = (session.data?.user as any)?.role
+  const userRole = session.data?.user?.role
 
   const isApprover = userRole === "claims-approval-user"
   const isInvestigator = userRole === "fraud-investigation-user"
@@ -97,7 +97,7 @@ export function TaskKanban() {
               key={col.title}
               title={col.title}
               documents={col.documents}
-              role={userRole as any}
+              role={userRole ?? "user"}
               count={col.documents.length}
             />
           ))}

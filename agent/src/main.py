@@ -5,6 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
+from src.middlewares.auth import WorkerAuthMiddleware
+from src.middlewares.security import SecurityHeadersMiddleware
 from src.routers import agent_router, chat_router
 
 
@@ -47,6 +49,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(WorkerAuthMiddleware)
 
 app.include_router(agent_router)
 app.include_router(chat_router)

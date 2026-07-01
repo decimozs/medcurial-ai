@@ -13,7 +13,7 @@ OLLAMA_BASE_URL = "https://ollama.com/v1"
 HF_TOKEN = os.getenv("HF_TOKEN")
 HF_BASE_URL = os.getenv("HF_BASE_URL")
 WORKER_API_KEY = os.getenv("WORKER_API_KEY")
-FRAUD_MODEL = "gemini-3-flash-preview:cloud"
+FRAUD_MODEL = os.getenv("FRAUD_MODEL", "minimax-m2.5:cloud")
 
 LLM_TIMEOUT = 120.0
 

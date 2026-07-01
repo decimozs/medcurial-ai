@@ -2,11 +2,7 @@ import { FileText, FileDigit, ScanFace, Binary, LayoutGrid } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export type SignatureViewMode =
-  | "original"
-  | "roi"
-  | "normalized"
-  | "preview"
-  | "grid"
+  "original" | "roi" | "normalized" | "preview" | "grid"
 
 interface SignatureNavigationProps {
   viewMode: SignatureViewMode

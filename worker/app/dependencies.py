@@ -9,5 +9,5 @@ def get_supabase_client() -> Client:
     return create_client(settings.supabase_url, settings.supabase_key)
 
 
-def get_api_url() -> str:
-    return get_settings().api_url
+def get_api_base_url() -> str:
+    return get_settings().api_base_url

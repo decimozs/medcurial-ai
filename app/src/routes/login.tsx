@@ -1,7 +1,5 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { LoginForm } from "@/features/auth/components/login-form"
-import { ShieldCheck, ArrowLeft } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { authClient } from "@/lib/auth-client"
 import { useEffect } from "react"
 
@@ -30,9 +28,6 @@ function LoginPage() {
         </div>
 
         <div className="relative z-10 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-md border-primary/20 bg-primary/10">
-            <ShieldCheck className="h-5 w-5 text-primary" />
-          </div>
           <span className="text-xl font-bold tracking-tight text-foreground/90">
             Medcurial AI
           </span>
@@ -64,29 +59,6 @@ function LoginPage() {
 
       {/* Right Side: Login Form */}
       <div className="flex flex-1 flex-col p-6 md:p-12">
-        <div className="mb-12 flex items-center justify-between md:mb-20">
-          <Button
-            variant="ghost"
-            size="sm"
-            asChild
-            className="h-9 font-medium text-muted-foreground hover:text-foreground"
-          >
-            <Link to="/">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to site
-            </Link>
-          </Button>
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <span className="text-muted-foreground">New to Medcurial?</span>
-            <Link
-              to="/signup"
-              className="font-semibold text-primary underline-offset-4 hover:underline"
-            >
-              Request Access
-            </Link>
-          </div>
-        </div>
-
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center">
           <LoginForm />
         </div>

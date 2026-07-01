@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { eq } from 'drizzle-orm';
+import { bodyLimit } from 'hono/body-limit';
 import {
   AGENT_URL,
   APP_URL,
@@ -7,9 +8,11 @@ import {
   SUPABASE_URL,
   WEBHOOK_EMAIL,
   WEBHOOK_URL,
+  WORKER_API_KEY,
 } from '@/constants';
 import { db } from '@/db';
 import { protectedRouteMiddleware } from '@/middlewares/protected';
+import { CAP, FIU, requireRole } from '@/middlewares/role';
 import {
   ApprovalSchema,
   documentsTable,
@@ -48,7 +51,7 @@ async function sendWebhook(
 
   for (let attempt = 1; attempt <= MAX_WEBHOOK_RETRIES; attempt++) {
     try {
-      const response = await fetch(WEBHOOK_URL, {
+      const response = await fetch(`${WEBHOOK_URL}/send-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -127,6 +130,7 @@ export const documentRoutes = factory
   .post(
     '/:id/findings',
     protectedRouteMiddleware,
+    bodyLimit({ maxSize: 1024 * 1024 }),
     zValidator('json', FindingSchema),
     async (c) => {
       const { id } = c.req.param();
@@ -164,6 +168,7 @@ export const documentRoutes = factory
   .post(
     '/',
     protectedRouteMiddleware,
+    bodyLimit({ maxSize: 1024 * 1024 }),
     zValidator('json', InsertDocumentSchema),
     async (c) => {
       const body = c.req.valid('json');
@@ -181,7 +186,10 @@ export const documentRoutes = factory
             try {
               const agentResponse = await fetch(`${AGENT_URL}/analyze`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-Worker-Key': WORKER_API_KEY,
+                },
                 body: JSON.stringify({ extracted_text: body.extractedText }),
               });
 
@@ -208,6 +216,7 @@ export const documentRoutes = factory
   .put(
     '/:id',
     protectedRouteMiddleware,
+    bodyLimit({ maxSize: 1024 * 1024 }),
     zValidator('json', UpdateDocumentSchema),
     async (c) => {
       const { id } = c.req.param();
@@ -247,7 +256,10 @@ export const documentRoutes = factory
               try {
                 const agentResponse = await fetch(`${AGENT_URL}/analyze`, {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'X-Worker-Key': WORKER_API_KEY,
+                  },
                   body: JSON.stringify({ extracted_text: body.extractedText }),
                 });
 
@@ -280,31 +292,38 @@ export const documentRoutes = factory
       }
     }
   )
-  .patch('/:id/fraud-analysis', protectedRouteMiddleware, async (c) => {
-    const { id } = c.req.param();
+  .patch(
+    '/:id/fraud-analysis',
+    protectedRouteMiddleware,
+    requireRole(FIU),
+    bodyLimit({ maxSize: 1024 * 1024 }),
+    async (c) => {
+      const { id } = c.req.param();
 
-    try {
-      const body = await c.req.json();
+      try {
+        const body = await c.req.json();
 
-      const [updatedDocument] = await db
-        .update(documentsTable)
-        .set({ fraudAnalysis: body })
-        .where(eq(documentsTable.id, id))
-        .returning();
+        const [updatedDocument] = await db
+          .update(documentsTable)
+          .set({ fraudAnalysis: body })
+          .where(eq(documentsTable.id, id))
+          .returning();
 
-      if (!updatedDocument) {
-        return c.json({ error: 'Document not found' }, 404);
+        if (!updatedDocument) {
+          return c.json({ error: 'Document not found' }, 404);
+        }
+
+        return c.json(updatedDocument);
+      } catch (error) {
+        console.error('Error updating fraud analysis:', error);
+        return c.json({ error: 'Failed to update fraud analysis' }, 500);
       }
-
-      return c.json(updatedDocument);
-    } catch (error) {
-      console.error('Error updating fraud analysis:', error);
-      return c.json({ error: 'Failed to update fraud analysis' }, 500);
     }
-  })
+  )
   .patch(
     '/:id/fiu-determination',
     protectedRouteMiddleware,
+    requireRole(FIU),
     zValidator('json', FiuDeterminationSchema),
     async (c) => {
       const user = c.get('user');
@@ -381,6 +400,7 @@ export const documentRoutes = factory
   .patch(
     '/:id/approve',
     protectedRouteMiddleware,
+    requireRole(CAP),
     zValidator('json', ApprovalSchema),
     async (c) => {
       const user = c.get('user');
@@ -441,49 +461,55 @@ export const documentRoutes = factory
       }
     }
   )
-  .post('/:id/notify', protectedRouteMiddleware, async (c) => {
-    const { id } = c.req.param();
-    const { userIds } = await c.req.json();
+  .post(
+    '/:id/notify',
+    protectedRouteMiddleware,
+    bodyLimit({ maxSize: 1024 * 1024 }),
+    async (c) => {
+      const { id } = c.req.param();
+      const { userIds } = await c.req.json();
 
-    try {
-      const document = await db.query.documentsTable.findFirst({
-        where: (item, { eq }) => eq(item.id, id),
-      });
+      try {
+        const document = await db.query.documentsTable.findFirst({
+          where: (item, { eq }) => eq(item.id, id),
+        });
 
-      if (!document) {
-        return c.json({ error: 'Document not found' }, 404);
-      }
-
-      const recipients = await db.query.user.findMany({
-        where: (u, { inArray }) => inArray(u.id, userIds),
-      });
-
-      const userSession = c.get('user');
-      const intent =
-        userSession?.role === 'claims-approval-user'
-          ? 'claims-approval'
-          : 'fraud-investigation';
-
-      // Send notifications in background
-      (async () => {
-        for (const recipient of recipients) {
-          if (recipient.email) {
-            await sendWebhook(id, intent, document, recipient.email);
-          }
+        if (!document) {
+          return c.json({ error: 'Document not found' }, 404);
         }
-      })();
 
-      return c.json({
-        message: `Notifications sent to ${recipients.length} users`,
-      });
-    } catch (error) {
-      console.error('Error sending notifications:', error);
-      return c.json({ error: 'Failed to send notifications' }, 500);
+        const recipients = await db.query.user.findMany({
+          where: (u, { inArray }) => inArray(u.id, userIds),
+        });
+
+        const userSession = c.get('user');
+        const intent =
+          userSession?.role === 'claims-approval-user'
+            ? 'claims-approval'
+            : 'fraud-investigation';
+
+        // Send notifications in background
+        (async () => {
+          for (const recipient of recipients) {
+            if (recipient.email) {
+              await sendWebhook(id, intent, document, recipient.email);
+            }
+          }
+        })();
+
+        return c.json({
+          message: `Notifications sent to ${recipients.length} users`,
+        });
+      } catch (error) {
+        console.error('Error sending notifications:', error);
+        return c.json({ error: 'Failed to send notifications' }, 500);
+      }
     }
-  })
+  )
   .patch(
     '/:id/reject',
     protectedRouteMiddleware,
+    requireRole(CAP),
     zValidator('json', ApprovalSchema),
     async (c) => {
       const user = c.get('user');
@@ -544,24 +570,29 @@ export const documentRoutes = factory
       }
     }
   )
-  .delete('/:id', protectedRouteMiddleware, async (c) => {
-    const { id } = c.req.param();
-    try {
-      await db.transaction(async (tx) => {
-        const existing = await tx.query.documentsTable.findFirst({
-          where: (item, { eq }) => eq(item.id, id),
+  .delete(
+    '/:id',
+    protectedRouteMiddleware,
+    requireRole(FIU, CAP),
+    async (c) => {
+      const { id } = c.req.param();
+      try {
+        await db.transaction(async (tx) => {
+          const existing = await tx.query.documentsTable.findFirst({
+            where: (item, { eq }) => eq(item.id, id),
+          });
+
+          if (!existing) {
+            throw new Error('Document not found');
+          }
+
+          await tx.delete(documentsTable).where(eq(documentsTable.id, id));
         });
 
-        if (!existing) {
-          throw new Error('Document not found');
-        }
-
-        await tx.delete(documentsTable).where(eq(documentsTable.id, id));
-      });
-
-      return c.json({ message: 'Document deleted successfully' });
-    } catch (error) {
-      console.error('Error deleting document:', error);
-      return c.json({ error: 'Failed to delete document' }, 500);
+        return c.json({ message: 'Document deleted successfully' });
+      } catch (error) {
+        console.error('Error deleting document:', error);
+        return c.json({ error: 'Failed to delete document' }, 500);
+      }
     }
-  });
+  );

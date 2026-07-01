@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
-import { AGENT_URL } from '@/constants';
+import { AGENT_URL, WORKER_API_KEY } from '@/constants';
 import { db } from '@/db';
 import { protectedRouteMiddleware } from '@/middlewares/protected';
 import {
@@ -230,6 +230,8 @@ export const chatRoutes = factory
             headers['X-LLM-Model'] = body.llmModel;
           }
 
+          headers['X-Worker-Key'] = WORKER_API_KEY;
+
           const agentResponse = await fetch(`${AGENT_URL}/chat`, {
             method: 'POST',
             headers,
@@ -286,7 +288,10 @@ export const chatRoutes = factory
           try {
             const titleResponse = await fetch(`${AGENT_URL}/chat/title`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Worker-Key': WORKER_API_KEY,
+              },
               body: JSON.stringify({ message: userMessage.content }),
             });
 
