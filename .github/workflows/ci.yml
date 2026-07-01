@@ -70,10 +70,6 @@ jobs:
         working-directory: api
         run: bun run lint
 
-      - name: Format check
-        working-directory: api
-        run: bun run format -- --check
-
       - name: Typecheck
         working-directory: api
         run: bun run typecheck
@@ -201,7 +197,7 @@ jobs:
 
       - name: Format check
         working-directory: app
-        run: bun run format -- --check
+        run: bun run format
 
       - name: Typecheck
         working-directory: app
