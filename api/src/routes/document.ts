@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { eq } from 'drizzle-orm';
 import { bodyLimit } from 'hono/body-limit';
 import {
@@ -24,7 +24,12 @@ import {
 } from '@/schemas';
 import { factory, zValidator } from '@/utils';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+function getSupabaseClient(): SupabaseClient | null {
+  if (!SUPABASE_URL || !SUPABASE_KEY) return null;
+  return createClient(SUPABASE_URL, SUPABASE_KEY);
+}
+
+const supabase = getSupabaseClient();
 
 const MAX_WEBHOOK_RETRIES = 3;
 
@@ -152,11 +157,13 @@ export const documentRoutes = factory
           .returning();
 
         // Broadcast to Supabase Realtime
-        await supabase.channel(`findings:review:${id}`).send({
-          type: 'broadcast',
-          event: 'INSERT',
-          payload: newFinding,
-        });
+        if (supabase) {
+          await supabase.channel(`findings:review:${id}`).send({
+            type: 'broadcast',
+            event: 'INSERT',
+            payload: newFinding,
+          });
+        }
 
         return c.json(newFinding);
       } catch (error) {
@@ -381,11 +388,13 @@ export const documentRoutes = factory
         });
 
         // Broadcast the new determination to Supabase Realtime
-        await supabase.channel(`findings:review:${id}`).send({
-          type: 'broadcast',
-          event: 'INSERT',
-          payload: data.newFinding,
-        });
+        if (supabase) {
+          await supabase.channel(`findings:review:${id}`).send({
+            type: 'broadcast',
+            event: 'INSERT',
+            payload: data.newFinding,
+          });
+        }
 
         return c.json(data.updatedDocument);
       } catch (error) {
