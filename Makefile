@@ -1,4 +1,4 @@
-.PHONY: dev dev-api dev-app dev-worker dev-agent dev-mcp install install-mcp clean
+.PHONY: dev dev-api dev-app dev-worker dev-agent dev-mcp docker-dev docker-prod docker-build docker-build-prod install install-mcp clean
 
 dev:
 	(cd mcp && uv run fastmcp run main.py --transport sse --port 8002) & \
@@ -29,6 +29,18 @@ dev-agent:
 
 dev-mcp:
 	cd mcp && uv run fastmcp run main.py --transport sse --port 8002
+
+docker-dev:
+	docker compose up --build
+
+docker-prod:
+	docker compose -f docker-compose.prod.yml up --build
+
+docker-build:
+	docker compose build
+
+docker-build-prod:
+	docker compose -f docker-compose.prod.yml build
 
 install:
 	cd api && bun install

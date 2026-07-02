@@ -2,7 +2,7 @@ services:
   api:
     build:
       context: ./api
-      target: dev
+      target: production
     ports:
       - "3000:3000"
     environment:
@@ -25,19 +25,19 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-    restart: on-failure
-    volumes:
-      - ./api:/app
-      - /app/node_modules
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     networks:
-      - medcurial
+      - frontend
+      - backend
 
   worker:
     build:
       context: ./worker
-      target: dev
-    ports:
-      - "8000:8000"
+      target: production
     environment:
       - API_BASE_URL=http://api:3000/api/v1
       - SUPABASE_URL=${SUPABASE_URL}
@@ -60,19 +60,18 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-    restart: on-failure
-    volumes:
-      - ./worker:/app
-      - /app/.venv
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
     networks:
-      - medcurial
+      - backend
 
   agent:
     build:
       context: ./agent
-      target: dev
-    ports:
-      - "8001:8001"
+      target: production
     environment:
       - OLLAMA_API_KEY=${OLLAMA_API_KEY}
       - HF_TOKEN=${HF_TOKEN}
@@ -90,44 +89,41 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-    restart: on-failure
-    volumes:
-      - ./agent:/app
-      - /app/.venv
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
     networks:
-      - medcurial
+      - backend
 
   app:
     build:
       context: ./app
-      target: dev
+      target: production
     ports:
       - "5173:5173"
-    environment:
-      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
-      - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
     depends_on:
       api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5173/"]
+      test: ["CMD", "curl", "-f", "http://localhost:5173/"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
-    restart: on-failure
-    volumes:
-      - ./app:/app
-      - /app/node_modules
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     networks:
-      - medcurial
+      - frontend
 
   mcp:
     build:
       context: ./mcp
-      target: dev
-    ports:
-      - "8002:8002"
+      target: production
     environment:
       - API_BASE_URL=http://api:3000/api/v1
       - WORKER_API_KEY=${WORKER_API_KEY}
@@ -144,13 +140,16 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-    restart: on-failure
-    volumes:
-      - ./mcp:/app
-      - /app/.venv
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     networks:
-      - medcurial
+      - backend
 
 networks:
-  medcurial:
+  frontend:
+    driver: bridge
+  backend:
     driver: bridge

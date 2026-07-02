@@ -31,6 +31,17 @@ make dev-agent  # Agent only (8001)
 make clean      # Remove caches + venvs, reinstall
 ```
 
+### Docker
+
+```bash
+make docker-dev        # Run dev stack with Docker Compose (docker-compose.yml)
+make docker-prod       # Run production stack (docker-compose.prod.yml)
+make docker-build      # Build all dev images
+make docker-build-prod # Build all production images
+```
+
+Dev compose mounts source volumes and runs dev servers with hot reload. Prod compose uses multi-stage builds, no volumes, restart policies, resource limits, and network isolation.
+
 ### Running Services Individually
 
 ```bash
