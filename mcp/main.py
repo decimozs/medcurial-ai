@@ -179,6 +179,75 @@ async def query_signatures(
     return result
 
 
+@mcp.tool
+async def get_signature_verification(document_id: str) -> dict:
+    """Get the signature verification result for a document.
+
+    Args:
+        document_id: The unique identifier of the document
+    """
+    logger.info(f"get_signature_verification called: document_id={document_id}")
+    url = f"{API_BASE_URL}/documents/{document_id}"
+    result = await _make_request(url)
+
+    if "error" in result:
+        logger.warning(f"get_signature_verification error: {result}")
+        return result
+
+    logger.info(f"get_signature_verification returned for: {document_id}")
+    return {
+        "id": result.get("id"),
+        "name": result.get("name"),
+        "status": result.get("status"),
+        "signatureVerification": result.get("signatureVerification"),
+    }
+
+
+@mcp.tool
+async def get_signature(signature_id: str) -> dict:
+    """Get a specific enrolled signature by ID.
+
+    Args:
+        signature_id: The unique identifier of the signature
+    """
+    logger.info(f"get_signature called: signature_id={signature_id}")
+    url = f"{API_BASE_URL}/signatures/{signature_id}"
+    result = await _make_request(url)
+
+    if "error" in result:
+        logger.warning(f"get_signature error: {result}")
+        return result
+
+    logger.info(f"get_signature returned: {signature_id}")
+    return result
+
+
+@mcp.tool
+async def get_document_findings(document_id: str) -> dict:
+    """Get review findings for a document.
+
+    Args:
+        document_id: The unique identifier of the document
+    """
+    logger.info(f"get_document_findings called: document_id={document_id}")
+    url = f"{API_BASE_URL}/documents/{document_id}"
+    result = await _make_request(url)
+
+    if "error" in result:
+        logger.warning(f"get_document_findings error: {result}")
+        return result
+
+    findings = result.get("findings", [])
+    logger.info(
+        f"get_document_findings returned {len(findings)} findings for: {document_id}"
+    )
+    return {
+        "id": result.get("id"),
+        "name": result.get("name"),
+        "findings": findings,
+    }
+
+
 if __name__ == "__main__":
     import os
 
