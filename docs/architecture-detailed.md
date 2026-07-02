@@ -33,12 +33,14 @@ flowchart TB
             Error[error.ts]
             Auth[auth.ts]
             Protected[protected.ts]
+            Role[role.ts]
         end
 
         subgraph Routes["Routes"]
             Sig_Route[signature.ts]
             Doc_Route[document.ts]
             Chat_Route[chat.ts]
+            User_Route[user.ts]
         end
 
         subgraph Schemas["Schemas"]
@@ -46,6 +48,7 @@ flowchart TB
             Doc_Schema[document.ts]
             Chat_Schema[chat.ts]
             Auth_Schema[auth.ts]
+            Finding_Schema[finding.ts]
         end
 
         subgraph Core["Core"]
@@ -86,6 +89,9 @@ erDiagram
         jsonb imageUrls
         text extractedText
         jsonb fraudAnalysis
+        jsonb signatureVerification
+        string approvalStatus
+        string fiuStatus
         timestamp createdAt
         timestamp updatedAt
     }
@@ -155,6 +161,23 @@ flowchart LR
     Chat --> Zod
     Zod --> Middleware
 ```
+
+### Document Routes
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/documents` | Protected | List all documents |
+| `GET` | `/documents/:id` | Protected | Get document with relations |
+| `POST` | `/documents` | Protected | Create document, trigger agent |
+| `PUT` | `/documents/:id` | Protected | Update document |
+| `DELETE` | `/documents/:id` | FIU/CAP | Delete document |
+| `PATCH` | `/documents/:id/fraud-analysis` | FIU | Update fraud analysis |
+| `PATCH` | `/documents/:id/fiu-determination` | FIU | Set FIU status |
+| `PATCH` | `/documents/:id/approve` | CAP | Approve document |
+| `PATCH` | `/documents/:id/reject` | CAP | Reject document |
+| `PATCH` | `/documents/:id/signature-verification` | Worker | Store verification result |
+| `POST` | `/documents/:id/signature-verification` | Protected | Trigger verification via worker |
+| `POST` | `/documents/:id/findings` | Protected | Create review finding |
 
 ---
 
@@ -303,6 +326,73 @@ sequenceDiagram
     API->>Database: Insert signature record
     Database-->>API: Return created record
     API-->>Client: Return signature data
+```
+
+### Document Analysis + Auto-Verify
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API as API (3000)
+    participant Worker as Worker (8000)
+    participant Roboflow as Roboflow
+    participant Supabase as Supabase
+    participant DB as Neon DB
+
+    Client->>API: POST /documents
+    API->>Worker: POST /workers/document-analysis
+
+    Worker->>Supabase: Upload original document
+    Worker->>Roboflow: Send image for analysis
+    Roboflow-->>Worker: text_extraction + signature_visualization
+
+    Worker->>Worker: Crop signature from bbox
+    Worker->>Supabase: Upload visualization + crop
+    Worker->>API: PUT /documents/:id (save URLs + text)
+    API->>DB: Update document
+
+    Note over Worker: Background: _auto_verify_signature
+
+    Worker->>API: GET /signatures (list enrolled)
+    API-->>Worker: All enrolled signatures
+    Worker->>Worker: Extract physician name from OCR
+    Worker->>Worker: Match name → find enrolled sig
+
+    alt Match found
+        loop For each reference siamese
+            Worker->>Supabase: Download reference
+            Worker->>Worker: Preprocess + align + score
+        end
+        Worker->>Worker: Best score + overlay
+        Worker->>Supabase: Upload overlay
+        Worker->>API: PATCH /documents/:id/signature-verification
+    else No match
+        Worker->>API: PATCH /documents/:id/signature-verification
+        Note over API: status: no_verified_signature
+    end
+```
+
+### Signature Verification (Manual Trigger)
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API as API (3000)
+    participant Worker as Worker (8000)
+    participant Supabase as Supabase
+
+    Client->>API: POST /documents/:id/signature-verification<br/>{signatureId}
+    API->>Worker: POST /workers/signature-verification<br/>{document_id, signature_id}
+
+    Worker->>API: GET /documents/:id
+    Worker->>API: GET /signatures/:id
+    Worker->>Supabase: Download extracted crop
+    Worker->>Supabase: Download reference siamese
+    Worker->>Worker: Preprocess both → align → score
+    Worker->>Supabase: Upload overlay
+    Worker->>API: PATCH /documents/:id/signature-verification
+    API-->>Worker: Updated document
+    Worker-->>Client: Return verification result
 ```
 
 ---
@@ -549,8 +639,30 @@ erDiagram
         jsonb imageUrls
         text extractedText
         jsonb fraudAnalysis
+        jsonb signatureVerification
+        text approvalStatus "pending/approved/rejected"
+        text approvalNotes
+        timestamp approvedAt
+        timestamp rejectedAt
+        text approvedBy FK
+        text rejectedBy FK
+        text fiuStatus "pending/fraud/not_fraud"
+        text fiuNotes
+        timestamp fiuInvestigatedAt
+        text fiuInvestigatedBy FK
         timestamp createdAt
         timestamp updatedAt
+    }
+
+    REVIEW_FINDINGS {
+        text id PK "nanoid"
+        serial no
+        text documentId FK
+        text userId FK
+        text content
+        text type "fiu/cap"
+        text status
+        timestamp createdAt
     }
 
     CHAT_SESSIONS {
@@ -571,11 +683,14 @@ erDiagram
     }
 
     SIGNATURES ||--o{ DOCUMENTS : "optional"
+    DOCUMENTS ||--o{ REVIEW_FINDINGS : "has"
     DOCUMENTS ||--o{ CHAT_SESSIONS : "optional"
     CHAT_SESSIONS ||--|{ CHAT_MESSAGES : "contains"
 ```
 
 ### imageUrls JSON Structure
+
+**Signatures:**
 
 ```mermaid
 flowchart TB
@@ -595,6 +710,24 @@ flowchart TB
     Siam -->|"inverted"| Preview
 ```
 
+**Documents:**
+
+```mermaid
+flowchart TB
+    subgraph DocJSON["Document imageUrls Structure"]
+        direction TB
+        
+        DOrig["original: string"]
+        DText["text_extraction: string"]
+        DSigViz["signature_extraction: string<br/>(Roboflow visualization)"]
+        DSigCrop["signature_crop: string<br/>(cropped signature)"]
+    end
+
+    DOrig -->|"Roboflow OCR"| DText
+    DOrig -->|"Roboflow detection"| DSigViz
+    DSigViz -->|"bbox crop"| DSigCrop
+```
+
 ---
 
 ## Environment Variables
@@ -605,17 +738,29 @@ flowchart TB
 |----------|----------|---------|-------------|
 | `DATABASE_URL` | Yes | - | PostgreSQL connection string |
 | `AGENT_URL` | No | `http://localhost:8001` | Agent service URL |
+| `WORKER_URL` | No | `http://localhost:8000` | Worker service URL |
+| `WORKER_API_KEY` | Yes | - | Shared secret for worker auth bypass |
+| `APP_URL` | No | `http://localhost:5173` | Frontend URL for webhooks |
+| `ALLOWED_ORIGINS` | No | `http://localhost:5173` | CORS origins (comma-separated) |
+| `WEBHOOK_URL` | No | - | Webhook endpoint for notifications |
+| `WEBHOOK_EMAIL` | No | - | Default email for notifications |
+| `SUPABASE_URL` | No | - | Supabase project URL (lazy-loaded) |
+| `SUPABASE_KEY` | No | - | Supabase anon key (lazy-loaded) |
 
 ### Worker Service
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `API_URL` | Yes | `http://localhost:3000/api/v1` | API service URL |
+| `API_BASE_URL` | Yes | `http://localhost:3000/api/v1` | API service URL |
 | `SUPABASE_URL` | Yes | - | Supabase project URL |
 | `SUPABASE_KEY` | Yes | - | Supabase anon key |
 | `ROBOFLOW_API_KEY` | Yes | - | Roboflow API key |
 | `ROBOFLOW_API_URL` | Yes | - | Roboflow API URL |
+| `ROBOFLOW_WORKSPACE_NAME` | Yes | - | Roboflow workspace name |
+| `ROBOFLOW_WORKSPACE_ID` | Yes | - | Roboflow workflow ID |
 | `WORKER_API_KEY` | Yes | - | Key for worker authentication |
+| `MAX_UPLOAD_SIZE_MB` | No | `10` | Max file upload size |
+| `MAX_UPLOAD_COUNT` | No | `10` | Max files per request |
 
 ### Agent Service
 

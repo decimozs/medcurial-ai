@@ -63,7 +63,9 @@ flowchart LR
     subgraph Services
         direction TB
         App[App<br/>5173] --> API[API<br/>3000]
-        API --> Worker[Worker<br/>8000]
+        App -->|"enrollment"| Worker[Worker<br/>8000]
+        API -->|"trigger verify"| Worker
+        Worker -->|"save/patch data"| API
         API --> Agent[Agent<br/>8001]
         API --> Neon_DB[(Neon<br/>PostgreSQL)]
         Worker --> Supabase[(Supabase<br/>Storage)]
@@ -120,6 +122,54 @@ sequenceDiagram
     API-->>App: Return chat response
 ```
 
+## Signature Verification Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant App as App (5173)
+    participant API as API (3000)
+    participant Worker as Worker (8000)
+    participant Roboflow as Roboflow
+    participant DB as Neon DB
+    participant Storage as Supabase
+
+    Note over User,Storage: Document Upload + Auto-Verify
+    User->>App: Upload medical claim document
+    App->>API: POST /documents
+    API->>Worker: POST /workers/document-analysis
+    Worker->>Roboflow: Send document for OCR + detection
+    Roboflow-->>Worker: text_extraction + signature_visualization
+    Worker->>Worker: Crop signature from bbox
+    Worker->>Storage: Upload visualization + crop
+    Worker->>API: PATCH /documents/:id (save URLs + text)
+    API->>DB: Update document record
+
+    Note over Worker,DB: Background Auto-Verify
+    Worker->>Worker: Extract physician name from OCR text
+    Worker->>API: GET /signatures (list enrolled)
+    API-->>Worker: All enrolled signatures
+    Worker->>Worker: Match physician name → find enrolled sig
+    alt Match found
+        loop For each reference siamese image
+            Worker->>Storage: Download reference siamese
+            Worker->>Worker: Preprocess + align + score
+        end
+        Worker->>Worker: Pick best score + generate overlay
+        Worker->>Storage: Upload overlay image
+        Worker->>API: PATCH /documents/:id/signature-verification
+        API->>DB: Store verification result
+    else No match
+        Worker->>API: PATCH /documents/:id/signature-verification
+        Note over API,DB: status: "no_verified_signature"
+    end
+
+    Note over App: Auto-refetch after 3s
+    App->>API: GET /documents/:id
+    API-->>App: Document with signatureVerification
+    App->>App: Render result in Analysis panel
+```
+
 ## Technology Stack Summary
 
 ```mermaid
@@ -158,6 +208,12 @@ graph TB
         FMCP[FastMCP]
     end
 
+    subgraph Model_Service["Model (Python)"]
+        YOLO[ultralytics YOLO]
+        Albumentations[Albumentations]
+        PIL[Pillow]
+    end
+
     R --> V
     V --> TQ
     TQ --> ZS
@@ -167,4 +223,7 @@ graph TB
     H --> D
     D --> Z
     H --> SAuth
+
+    YOLO --> Albumentations
+    Albumentations --> PIL
 ```
