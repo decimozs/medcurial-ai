@@ -165,3 +165,107 @@ async def update_signature_status(
         raise ExternalAPIError(
             "Failed to update signature status: max retries exceeded"
         )
+
+
+async def get_signature(
+    api_url: str,
+    signature_id: str,
+) -> dict[str, Any]:
+    async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        headers = _get_worker_headers()
+        for attempt in range(MAX_RETRIES):
+            try:
+                response = await client.get(
+                    f"{api_url}/signatures/{signature_id}",
+                    headers=headers,
+                )
+                response.raise_for_status()
+                return response.json()
+            except (httpx.ConnectTimeout, httpx.ConnectError, httpx.ReadTimeout) as e:
+                if attempt == MAX_RETRIES - 1:
+                    raise ExternalAPIError(
+                        f"Failed to fetch signature after {MAX_RETRIES} attempts: {e}"
+                    )
+                await asyncio.sleep(1 * (attempt + 1))
+            except httpx.HTTPStatusError as e:
+                raise ExternalAPIError(f"Failed to fetch signature: {e.response.text}")
+
+        raise ExternalAPIError("Failed to fetch signature: max retries exceeded")
+
+
+async def get_document(
+    api_url: str,
+    document_id: str,
+) -> dict[str, Any]:
+    async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        headers = _get_worker_headers()
+        for attempt in range(MAX_RETRIES):
+            try:
+                response = await client.get(
+                    f"{api_url}/documents/{document_id}",
+                    headers=headers,
+                )
+                response.raise_for_status()
+                return response.json()
+            except (httpx.ConnectTimeout, httpx.ConnectError, httpx.ReadTimeout) as e:
+                if attempt == MAX_RETRIES - 1:
+                    raise ExternalAPIError(
+                        f"Failed to fetch document after {MAX_RETRIES} attempts: {e}"
+                    )
+                await asyncio.sleep(1 * (attempt + 1))
+            except httpx.HTTPStatusError as e:
+                raise ExternalAPIError(f"Failed to fetch document: {e.response.text}")
+
+        raise ExternalAPIError("Failed to fetch document: max retries exceeded")
+
+
+async def patch_document_verification(
+    api_url: str,
+    document_id: str,
+    verification_data: dict[str, Any],
+) -> dict[str, Any]:
+    async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        headers = _get_worker_headers()
+        for attempt in range(MAX_RETRIES):
+            try:
+                response = await client.patch(
+                    f"{api_url}/documents/{document_id}/signature-verification",
+                    json=verification_data,
+                    headers=headers,
+                )
+                response.raise_for_status()
+                return response.json()
+            except (httpx.ConnectTimeout, httpx.ConnectError, httpx.ReadTimeout) as e:
+                if attempt == MAX_RETRIES - 1:
+                    raise ExternalAPIError(
+                        f"Failed to update verification after {MAX_RETRIES} attempts: {e}"
+                    )
+                await asyncio.sleep(1 * (attempt + 1))
+            except httpx.HTTPStatusError as e:
+                raise ExternalAPIError(
+                    f"Failed to update verification: {e.response.text}"
+                )
+
+        raise ExternalAPIError("Failed to update verification: max retries exceeded")
+
+
+async def list_signatures(api_url: str) -> list[dict[str, Any]]:
+    """Fetch all enrolled signatures, most recent first."""
+    async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        headers = _get_worker_headers()
+        for attempt in range(MAX_RETRIES):
+            try:
+                response = await client.get(
+                    f"{api_url}/signatures",
+                    headers=headers,
+                )
+                response.raise_for_status()
+                return response.json()
+            except (httpx.ConnectTimeout, httpx.ConnectError, httpx.ReadTimeout):
+                if attempt == MAX_RETRIES - 1:
+                    return []
+                await asyncio.sleep(1 * (attempt + 1))
+            except httpx.HTTPStatusError:
+                return []
+
+        return []

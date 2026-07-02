@@ -13,6 +13,7 @@ export const documentsTable = pgTable('documents', {
   imageUrls: jsonb('image_urls').notNull(),
   extractedText: text('extracted_text'),
   fraudAnalysis: jsonb('fraud_analysis'),
+  signatureVerification: jsonb('signature_verification'),
   approvalStatus: text('approval_status').notNull().default('pending'),
   approvalNotes: text('approval_notes'),
   approvedAt: timestamp('approved_at'),
@@ -59,8 +60,39 @@ export const FiuDeterminationSchema = z.object({
   status: z.enum(['fraud', 'not_fraud']),
 });
 
+export const SignatureVerificationResultSchema = z.object({
+  status: z.enum([
+    'pending',
+    'verified',
+    'mismatch',
+    'needs_review',
+    'failed',
+    'no_verified_signature',
+  ]),
+  expectedSignatureId: z.string(),
+  expectedSignatoryName: z.string(),
+  comparedAt: z.string(),
+  score: z.number().min(0).max(1),
+  threshold: z.number().min(0).max(1),
+  matchedReferenceUrl: z.string(),
+  extractedSignatureUrl: z.string(),
+  overlayUrl: z.string().optional(),
+  notes: z.string().nullable().optional(),
+  error: z.string().nullable().optional(),
+});
+
+export const SignatureVerificationTriggerSchema = z.object({
+  signatureId: z.string().min(1, 'Signature ID is required'),
+});
+
 export type Document = typeof documentsTable.$inferSelect;
 export type InsertDocument = ReturnType<typeof InsertDocumentSchema.parse>;
 export type UpdateDocument = ReturnType<typeof UpdateDocumentSchema.parse>;
 export type Approval = z.infer<typeof ApprovalSchema>;
 export type FiuDetermination = z.infer<typeof FiuDeterminationSchema>;
+export type SignatureVerificationResult = z.infer<
+  typeof SignatureVerificationResultSchema
+>;
+export type SignatureVerificationTrigger = z.infer<
+  typeof SignatureVerificationTriggerSchema
+>;

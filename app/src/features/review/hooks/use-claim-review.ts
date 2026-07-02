@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import { toast } from "sonner"
@@ -42,6 +42,23 @@ export function useClaimReview(id: string) {
       return response.json()
     },
   })
+
+  const autoVerifyAttempts = useRef(0)
+
+  useEffect(() => {
+    if (
+      doc &&
+      doc.fraudAnalysis &&
+      !doc.signatureVerification &&
+      autoVerifyAttempts.current < 3
+    ) {
+      autoVerifyAttempts.current += 1
+      const timer = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["document", id] })
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [doc, queryClient, id])
 
   const effectiveRightTab =
     activeRightTab === "notes" && doc?.approvalStatus === "pending"
@@ -238,7 +255,11 @@ export function useClaimReview(id: string) {
       case "text":
         return doc.imageUrls.text_extraction || doc.imageUrls.original
       case "signature":
-        return doc.imageUrls.signature_extraction || doc.imageUrls.original
+        return (
+          doc.imageUrls.signature_crop ||
+          doc.imageUrls.signature_extraction ||
+          doc.imageUrls.original
+        )
       default:
         return doc.imageUrls.original
     }

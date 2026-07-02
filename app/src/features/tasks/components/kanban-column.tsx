@@ -17,7 +17,7 @@ export function KanbanColumn({
   return (
     <div className="flex h-full min-h-0 flex-col gap-4">
       <div className="flex items-baseline justify-between px-2">
-        <h2 className="text-xs font-medium tracking-widest text-muted-foreground/60 uppercase">
+        <h2 className="text-xs font-medium text-muted-foreground/60">
           {title}
         </h2>
         <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">

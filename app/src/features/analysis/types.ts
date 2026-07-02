@@ -34,6 +34,26 @@ export interface FraudDetectorResponse {
   assessment?: string
 }
 
+export interface SignatureVerificationResult {
+  status:
+    | "pending"
+    | "verified"
+    | "mismatch"
+    | "needs_review"
+    | "failed"
+    | "no_verified_signature"
+  expectedSignatureId: string
+  expectedSignatoryName: string
+  comparedAt: string
+  score: number
+  threshold: number
+  matchedReferenceUrl: string
+  extractedSignatureUrl: string
+  overlayUrl?: string
+  notes?: string
+  error?: string
+}
+
 export interface FraudAnalysisData {
   auditor_response?: string | AuditorResponse | { raw_response?: string }
   ranking_response?: string | RankingResponse

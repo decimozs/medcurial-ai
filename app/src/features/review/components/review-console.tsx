@@ -300,6 +300,11 @@ export function ReviewConsole({
             <div className="h-full overflow-y-auto">
               <FraudAnalysisPanel
                 data={doc.fraudAnalysis}
+                signatureVerification={doc.signatureVerification}
+                extractedSignatureImageUrl={
+                  doc.imageUrls.signature_crop ||
+                  doc.signatureVerification?.extractedSignatureUrl
+                }
                 isCollapsed={false}
               />
             </div>

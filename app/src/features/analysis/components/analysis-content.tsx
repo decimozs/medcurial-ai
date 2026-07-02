@@ -1,4 +1,10 @@
-import { ShieldAlert, ShieldQuestion, AlertTriangle, Bot } from "lucide-react"
+import {
+  ShieldAlert,
+  ShieldQuestion,
+  AlertTriangle,
+  Bot,
+  Fingerprint,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   Tooltip,
@@ -6,10 +12,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { Badge } from "@/components/ui/badge"
 import type {
   AuditorResponse,
   RankingResponse,
   FraudDetectorResponse,
+  SignatureVerificationResult,
 } from "../types"
 import { rankColor, getSuspicionDescription } from "../helpers/utils"
 import { ScoreBar } from "./score-bar"
@@ -18,10 +26,30 @@ import { CollapsibleSection } from "./collapsible-section"
 import { SafeRender } from "./safe-render"
 import { RankIcon } from "./rank-icon"
 
+const VERIFICATION_STATUS_MAP: Record<
+  string,
+  {
+    label: string
+    variant: "default" | "destructive" | "secondary" | "outline" | "success"
+  }
+> = {
+  verified: { label: "Verified", variant: "success" },
+  mismatch: { label: "Mismatch", variant: "destructive" },
+  pending: { label: "Pending", variant: "secondary" },
+  needs_review: { label: "Needs Review", variant: "outline" },
+  no_verified_signature: {
+    label: "No Verified Signature",
+    variant: "secondary",
+  },
+  failed: { label: "Failed", variant: "destructive" },
+}
+
 interface AnalysisContentProps {
   auditor: AuditorResponse | null
   ranking: RankingResponse | null
   detector: FraudDetectorResponse | null
+  signatureVerification?: SignatureVerificationResult | null
+  extractedSignatureImageUrl?: string | null
   showChart: boolean
   isGrid?: boolean
 }
@@ -30,9 +58,13 @@ export function AnalysisContent({
   auditor,
   ranking,
   detector,
+  signatureVerification,
+  extractedSignatureImageUrl,
   showChart,
   isGrid,
 }: AnalysisContentProps) {
+  const displayedExtractedSignatureUrl =
+    extractedSignatureImageUrl || signatureVerification?.extractedSignatureUrl
   const finalRank = auditor?.final_rank ?? ranking?.final_rank
   const overallScore = auditor?.overall_score
   const isFlagged = auditor?.is_flagged_for_review
@@ -240,6 +272,103 @@ export function AnalysisContent({
           </CollapsibleSection>
         )}
       </div>
+
+      {signatureVerification && (
+        <CollapsibleSection
+          title="Signature Verification"
+          icon={<Fingerprint className="h-3.5 w-3.5 text-primary/60" />}
+          defaultOpen
+        >
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">
+                {signatureVerification.expectedSignatoryName}
+              </span>
+              <Badge
+                variant={
+                  VERIFICATION_STATUS_MAP[signatureVerification.status]
+                    ?.variant ?? "secondary"
+                }
+                className="text-[10px]"
+              >
+                {VERIFICATION_STATUS_MAP[signatureVerification.status]?.label ??
+                  signatureVerification.status}
+              </Badge>
+            </div>
+
+            {signatureVerification.score !== undefined && (
+              <ScoreBar
+                label="Match Score"
+                value={signatureVerification.score}
+                tooltip={`Threshold: ${(signatureVerification.threshold * 100).toFixed(0)}%`}
+              />
+            )}
+
+            {signatureVerification.error && (
+              <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-2">
+                <p className="text-xs text-destructive">
+                  {signatureVerification.error}
+                </p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-2">
+              {displayedExtractedSignatureUrl && (
+                <a
+                  href={displayedExtractedSignatureUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group relative overflow-hidden rounded-lg border border-border/30"
+                >
+                  <img
+                    src={displayedExtractedSignatureUrl}
+                    alt="Extracted signature"
+                    className="h-20 w-full object-contain p-1 transition-transform group-hover:scale-105"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/40 to-transparent p-1">
+                    <p className="text-[9px] text-white/80">Extracted</p>
+                  </div>
+                </a>
+              )}
+              {signatureVerification.matchedReferenceUrl && (
+                <a
+                  href={signatureVerification.matchedReferenceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group relative overflow-hidden rounded-lg border border-border/30"
+                >
+                  <img
+                    src={signatureVerification.matchedReferenceUrl}
+                    alt="Reference signature"
+                    className="h-20 w-full object-contain p-1 transition-transform group-hover:scale-105"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/40 to-transparent p-1">
+                    <p className="text-[9px] text-white/80">Reference</p>
+                  </div>
+                </a>
+              )}
+            </div>
+
+            {signatureVerification.overlayUrl && (
+              <a
+                href={signatureVerification.overlayUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="group relative block overflow-hidden rounded-lg border border-border/30"
+              >
+                <img
+                  src={signatureVerification.overlayUrl}
+                  alt="Signature overlay comparison"
+                  className="h-24 w-full object-contain p-1 transition-transform group-hover:scale-105"
+                />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/40 to-transparent p-1">
+                  <p className="text-[9px] text-white/80">Overlay</p>
+                </div>
+              </a>
+            )}
+          </div>
+        </CollapsibleSection>
+      )}
     </div>
   )
 }

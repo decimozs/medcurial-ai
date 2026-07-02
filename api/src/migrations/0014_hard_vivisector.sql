@@ -1,0 +1,1 @@
+ALTER TABLE "documents" ADD COLUMN "signature_verification" jsonb;

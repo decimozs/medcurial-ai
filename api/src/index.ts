@@ -79,7 +79,10 @@ const app = factory
     const method = c.req.method;
     const path = c.req.path;
     const isWorkerRoute =
-      (method === 'POST' || method === 'PUT') &&
+      (method === 'GET' ||
+        method === 'POST' ||
+        method === 'PUT' ||
+        method === 'PATCH') &&
       (path.startsWith(`${API_VERSION}/signatures`) ||
         path.startsWith(`${API_VERSION}/documents`));
 

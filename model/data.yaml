@@ -1,0 +1,7 @@
+path: ./dataset/sss-with-signature-overlay-split
+train: train/images
+val: val/images
+test: test/images
+
+names:
+  0: signature

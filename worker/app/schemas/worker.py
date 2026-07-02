@@ -28,3 +28,28 @@ class DocumentAnalysisResponse(BaseModel):
     success: bool
     message: str
     data: list[DocumentAnalysisResult] | None = None
+
+
+class SignatureVerificationRequest(BaseModel):
+    document_id: str
+    signature_id: str
+
+
+class SignatureVerificationResult(BaseModel):
+    status: str
+    expectedSignatureId: str
+    expectedSignatoryName: str
+    comparedAt: str
+    score: float
+    threshold: float
+    matchedReferenceUrl: str
+    extractedSignatureUrl: str
+    overlayUrl: str | None = None
+    notes: str | None = None
+    error: str | None = None
+
+
+class SignatureVerificationResponse(BaseModel):
+    success: bool
+    message: str
+    data: SignatureVerificationResult | None = None

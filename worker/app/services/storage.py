@@ -127,6 +127,35 @@ def upload_documents(
     return urls
 
 
+def download_image_bytes(
+    supabase_client: Client,
+    url: str,
+) -> bytes | None:
+    """Download image bytes from a Supabase public URL.
+
+    Extracts bucket and path from the URL, then downloads.
+    Returns None if download fails.
+    """
+    try:
+        from urllib.parse import urlparse
+
+        parsed = urlparse(url)
+        path_parts = parsed.path.split("/")
+        bucket_idx = -1
+        for i, part in enumerate(path_parts):
+            if part in ("signatures", "documents"):
+                bucket_idx = i
+                break
+        if bucket_idx == -1:
+            return None
+        bucket = path_parts[bucket_idx]
+        file_path = "/".join(path_parts[bucket_idx + 1 :])
+        resp = supabase_client.storage.from_(bucket).download(file_path)
+        return resp
+    except Exception:
+        return None
+
+
 def upload_base64_image(
     supabase_client: Client,
     base64_data: str,

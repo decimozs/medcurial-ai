@@ -78,3 +78,13 @@ skills-lock.json
 # Transient
 # =====================
 app/lint_output.txt
+
+# =====================
+# Model (YOLO training)
+# =====================
+model/.venv/
+model/dataset/
+model/runs/
+model/real_test_samples/
+model/real_test_samples_cropped/
+model/*.pt

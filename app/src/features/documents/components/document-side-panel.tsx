@@ -265,6 +265,11 @@ export function DocumentSidePanel({
               ) : (
                 <FraudAnalysisPanel
                   data={doc.fraudAnalysis}
+                  signatureVerification={doc.signatureVerification}
+                  extractedSignatureImageUrl={
+                    doc.imageUrls.signature_crop ||
+                    doc.signatureVerification?.extractedSignatureUrl
+                  }
                   isCollapsed={false}
                   // No toggle inside, we have the external one
                 />

@@ -16,6 +16,7 @@ export interface DocumentThumbnail {
     original?: string
     text_extraction?: string
     signature_extraction?: string
+    signature_crop?: string
   }
   approvalStatus: "pending" | "approved" | "rejected"
   extractedText?: string

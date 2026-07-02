@@ -188,7 +188,12 @@ function ClaimReviewPage() {
             </button>
 
             <button
-              disabled={!doc.imageUrls.signature_extraction}
+              disabled={
+                !(
+                  doc.imageUrls.signature_crop ||
+                  doc.imageUrls.signature_extraction
+                )
+              }
               onClick={() => setViewMode("signature")}
               title="Signature Extraction"
               className={cn(
@@ -196,7 +201,10 @@ function ClaimReviewPage() {
                 viewMode === "signature"
                   ? "border-primary/20 bg-primary/10 text-primary shadow-sm hover:bg-primary/20"
                   : "border-transparent text-muted-foreground/50 hover:bg-muted/60 hover:text-foreground",
-                !doc.imageUrls.signature_extraction &&
+                !(
+                  doc.imageUrls.signature_crop ||
+                  doc.imageUrls.signature_extraction
+                ) &&
                   "cursor-not-allowed opacity-20 hover:bg-transparent hover:text-muted-foreground/50"
               )}
             >

@@ -80,7 +80,11 @@ export function useDocumentDetails(id: string) {
       case "text":
         return doc.imageUrls.text_extraction || doc.imageUrls.original
       case "signature":
-        return doc.imageUrls.signature_extraction || doc.imageUrls.original
+        return (
+          doc.imageUrls.signature_crop ||
+          doc.imageUrls.signature_extraction ||
+          doc.imageUrls.original
+        )
       default:
         return doc.imageUrls.original
     }

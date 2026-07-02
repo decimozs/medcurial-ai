@@ -43,5 +43,5 @@ install-mcp:
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type d -name "node_modules" -exec rm -rf {} +
-	rm -rf worker/.venv agent/.venv mcp/.venv
+	rm -rf worker/.venv agent/.venv mcp/.venv model/.venv
 	make install

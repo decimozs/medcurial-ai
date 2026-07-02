@@ -20,6 +20,7 @@ export const APP_CONFIG = {
 export const API_VERSION = '/api/v1';
 
 export const AGENT_URL = process.env.AGENT_URL || 'http://localhost:8001';
+export const WORKER_URL = process.env.WORKER_URL || 'http://localhost:8000';
 
 export const WORKER_API_KEY = process.env.WORKER_API_KEY || '';
 

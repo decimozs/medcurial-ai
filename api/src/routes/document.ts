@@ -9,6 +9,7 @@ import {
   WEBHOOK_EMAIL,
   WEBHOOK_URL,
   WORKER_API_KEY,
+  WORKER_URL,
 } from '@/constants';
 import { db } from '@/db';
 import { protectedRouteMiddleware } from '@/middlewares/protected';
@@ -20,6 +21,8 @@ import {
   FiuDeterminationSchema,
   InsertDocumentSchema,
   reviewFindingsTable,
+  SignatureVerificationResultSchema,
+  SignatureVerificationTriggerSchema,
   UpdateDocumentSchema,
 } from '@/schemas';
 import { factory, zValidator } from '@/utils';
@@ -403,6 +406,81 @@ export const documentRoutes = factory
             ? error.message
             : 'Failed to update FIU determination';
         return c.json({ error: message }, 400);
+      }
+    }
+  )
+  .patch(
+    '/:id/signature-verification',
+    zValidator('json', SignatureVerificationResultSchema),
+    async (c) => {
+      const { id } = c.req.param();
+      const body = c.req.valid('json');
+
+      try {
+        const [updatedDocument] = await db
+          .update(documentsTable)
+          .set({ signatureVerification: body })
+          .where(eq(documentsTable.id, id))
+          .returning();
+
+        if (!updatedDocument) {
+          return c.json({ error: 'Document not found' }, 404);
+        }
+
+        return c.json(updatedDocument);
+      } catch (error) {
+        console.error('Error updating signature verification:', error);
+        return c.json(
+          { error: 'Failed to update signature verification' },
+          500
+        );
+      }
+    }
+  )
+  .post(
+    '/:id/signature-verification',
+    protectedRouteMiddleware,
+    zValidator('json', SignatureVerificationTriggerSchema),
+    async (c) => {
+      const { id } = c.req.param();
+      const { signatureId } = c.req.valid('json');
+
+      if (!WORKER_URL) {
+        return c.json({ error: 'Worker service not configured' }, 502);
+      }
+
+      try {
+        const workerResponse = await fetch(
+          `${WORKER_URL}/workers/signature-verification`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Worker-Key': WORKER_API_KEY,
+            },
+            body: JSON.stringify({
+              document_id: id,
+              signature_id: signatureId,
+            }),
+          }
+        );
+
+        if (!workerResponse.ok) {
+          const errorText = await workerResponse.text();
+          return c.json(
+            { error: `Worker returned ${workerResponse.status}: ${errorText}` },
+            workerResponse.status as Parameters<typeof c.json>[1]
+          );
+        }
+
+        const result = await workerResponse.json();
+        return c.json(result);
+      } catch (error) {
+        console.error('Error triggering signature verification:', error);
+        return c.json(
+          { error: 'Failed to trigger signature verification' },
+          502
+        );
       }
     }
   )

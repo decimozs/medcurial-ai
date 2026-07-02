@@ -100,7 +100,7 @@ export function DocumentHeader({ doc, isFetching }: DocumentHeaderProps) {
       <div className="flex items-center gap-3">
         {/* Investigation Banner for Approvers */}
         {isApprover && isInvestigationPending && (
-          <div className="flex animate-in items-center gap-3 rounded-xl border border-orange-500/20 bg-orange-500/5 px-4 py-2 text-[10px] font-bold tracking-widest text-orange-600 uppercase shadow-sm fade-in slide-in-from-right-2">
+          <div className="flex animate-in items-center gap-3 rounded-xl border border-orange-500/20 bg-orange-500/5 px-4 py-2 text-[10px] font-bold text-orange-600 shadow-sm fade-in slide-in-from-right-2">
             <Info className="h-3.5 w-3.5" />
             Claims is still on investigation
           </div>
@@ -114,7 +114,7 @@ export function DocumentHeader({ doc, isFetching }: DocumentHeaderProps) {
             <Button
               variant="outline"
               size="sm"
-              className="h-9 rounded-xl border-primary/20 bg-primary/5 px-4 text-[10px] font-bold tracking-widest text-primary uppercase shadow-sm transition-all hover:bg-primary/10"
+              className="h-9 rounded-xl border-primary/20 bg-primary/5 px-4 text-[10px] font-bold text-primary shadow-sm transition-all hover:bg-primary/10"
               onClick={() => {
                 navigate({
                   to: isInvestigator ? "/fiu/$id" : "/cap/$id",

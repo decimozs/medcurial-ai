@@ -52,7 +52,10 @@ export function DocumentNavigation({
       </button>
 
       <button
-        disabled={isProcessing || !doc.imageUrls.signature_extraction}
+        disabled={
+          isProcessing ||
+          !(doc.imageUrls.signature_crop || doc.imageUrls.signature_extraction)
+        }
         onClick={() => setViewMode("signature")}
         title="Signature Extraction"
         className={cn(
@@ -60,7 +63,10 @@ export function DocumentNavigation({
           viewMode === "signature"
             ? "border-primary/20 bg-primary/10 text-primary hover:bg-primary/20"
             : "border-transparent text-muted-foreground/50 hover:bg-muted/60 hover:text-foreground",
-          (isProcessing || !doc.imageUrls.signature_extraction) &&
+          (isProcessing ||
+            !(
+              doc.imageUrls.signature_crop || doc.imageUrls.signature_extraction
+            )) &&
             "cursor-not-allowed opacity-20 hover:bg-transparent hover:text-muted-foreground/50"
         )}
       >

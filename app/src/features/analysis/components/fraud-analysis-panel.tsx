@@ -12,18 +12,23 @@ import type {
   AuditorResponse,
   RankingResponse,
   FraudDetectorResponse,
+  SignatureVerificationResult,
 } from "../types"
 import { parseJson } from "../helpers/utils"
 import { AnalysisContent } from "./analysis-content"
 
 export interface FraudAnalysisPanelProps {
   data: FraudAnalysisData | null | undefined
+  signatureVerification?: SignatureVerificationResult | null
+  extractedSignatureImageUrl?: string | null
   isCollapsed?: boolean
   onToggleCollapse?: () => void
 }
 
 export function FraudAnalysisPanel({
   data,
+  signatureVerification,
+  extractedSignatureImageUrl,
   isCollapsed,
   onToggleCollapse,
 }: FraudAnalysisPanelProps) {
@@ -143,6 +148,8 @@ export function FraudAnalysisPanel({
             auditor={auditor}
             ranking={ranking}
             detector={detector}
+            signatureVerification={signatureVerification}
+            extractedSignatureImageUrl={extractedSignatureImageUrl}
             showChart={showChart}
           />
         </div>
