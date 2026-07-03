@@ -13,6 +13,7 @@ A signature verification system that uses AI to detect fraudulent signatures in 
 | Agent | Python, FastAPI, LangGraph, Ollama Cloud |
 | MCP | Python, FastMCP |
 | App | React 19, TanStack Query, Vite |
+| Model | Python, YOLO/ultralytics |
 
 ## Prerequisites
 
@@ -28,14 +29,17 @@ A signature verification system that uses AI to detect fraudulent signatures in 
 
 ```
 medcurial/
-├── api/           # TypeScript REST API (Bun + Hono + Drizzle)
-├── worker/        # Python image processing (FastAPI + OpenCV)
-├── agent/         # Python AI agent (FastAPI + LangGraph)
-├── mcp/           # Python MCP server (FastMCP)
-├── app/           # React frontend (Vite + TanStack)
-├── assets/        # Test signature images
-├── Makefile       # Development commands
-└── AGENTS.md      # Agent guidelines
+├── api/                    # TypeScript REST API (Bun + Hono + Drizzle)
+├── worker/                 # Python image processing (FastAPI + OpenCV)
+├── agent/                  # Python AI agent (FastAPI + LangGraph)
+├── mcp/                    # Python MCP server (FastMCP)
+├── app/                    # React frontend (Vite + TanStack)
+├── model/                  # YOLO signature detection training
+├── docs/                   # Architecture documentation
+├── docker-compose.yml      # Docker Compose (dev)
+├── docker-compose.prod.yml # Docker Compose (production)
+├── Makefile                # Development commands
+└── AGENTS.md               # Agent guidelines
 ```
 
 ## Installation & Setup
@@ -80,23 +84,36 @@ cd app && bun install
 
 ## Environment Variables
 
+See `.env.example` for the full list. Key variables per service:
+
 ### API (`api/.env`)
 
 ```bash
 DATABASE_URL=postgresql://username:password@host:port/database
 AGENT_URL=http://localhost:8001
+WORKER_URL=http://localhost:8000
+WORKER_API_KEY=shared_secret_between_api_and_worker
+ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+APP_URL=http://localhost:5173
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your_anon_key
+WEBHOOK_URL=
+WEBHOOK_EMAIL=
 ```
 
 ### Worker (`worker/.env`)
 
 ```bash
-API_URL=http://localhost:3000/api/v1
+API_BASE_URL=http://localhost:3000/api/v1
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_KEY=your_anon_key
+WORKER_API_KEY=shared_secret_between_api_and_worker
 ROBOFLOW_API_KEY=your_roboflow_key
 ROBOFLOW_API_URL=https://api.roboflow.com
 ROBOFLOW_WORKSPACE_NAME=your_workspace
 ROBOFLOW_WORKSPACE_ID=your_workspace_id
+MAX_UPLOAD_SIZE_MB=10
+MAX_UPLOAD_COUNT=10
 ```
 
 ### Agent (`agent/.env`)
@@ -106,12 +123,26 @@ OLLAMA_API_KEY=your_ollama_api_key
 HF_TOKEN=your_huggingface_token
 HF_BASE_URL=https://router.huggingface.co/v1
 API_BASE_URL=http://localhost:3000/api/v1
+WORKER_API_KEY=shared_secret_between_api_and_worker
+FRAUD_MODEL=minimax-m2.5:cloud
+MCP_HOST=127.0.0.1
+MCP_PORT=8002
 ```
 
 ### MCP (`mcp/.env`)
 
 ```bash
 API_BASE_URL=http://localhost:3000/api/v1
+WORKER_API_KEY=shared_secret_between_api_and_worker
+MCP_HOST=0.0.0.0
+MCP_PORT=8002
+```
+
+### App (`app/.env`)
+
+```bash
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your_anon_key
 ```
 
 ## Running the Application
@@ -119,13 +150,18 @@ API_BASE_URL=http://localhost:3000/api/v1
 ### Using Makefile
 
 ```bash
-make dev          # Run all services
-make dev-infra    # Run API, Worker, Agent (no frontend)
+make dev          # Run all services locally
+make dev-infra    # Run API, Worker, Agent locally (no frontend)
 make dev-api      # API only (port 3000)
 make dev-worker   # Worker only (port 8000)
 make dev-agent    # Agent only (port 8001)
 make dev-app      # App only (port 5173)
-make dev-mcp      # MCP (stdio mode)
+make dev-mcp      # MCP only (SSE mode, port 8002)
+
+make docker-dev         # Run dev stack with Docker Compose
+make docker-prod        # Run production stack with Docker Compose
+make docker-build       # Build all dev Docker images
+make docker-build-prod  # Build all production Docker images
 ```
 
 ### Individual Services
@@ -151,7 +187,7 @@ cd agent && uv run uvicorn src.main:app --reload --port 8001
 **MCP** (SSE mode on port 8002)
 
 ```bash
-cd mcp && uv run fastmcp run main.py --transport sse --port 8002
+cd mcp && uv run fastmcp run main.py --transport sse --host 0.0.0.0 --port 8002
 ```
 
 **App**
@@ -160,15 +196,27 @@ cd mcp && uv run fastmcp run main.py --transport sse --port 8002
 cd app && bun run dev
 ```
 
+### Docker
+
+```bash
+# Dev stack: volume mounts, hot reload, all ports exposed
+docker compose up --build
+
+# Production stack: multi-stage builds, no volumes, restart policies,
+# resource limits, and frontend/backend network isolation
+docker compose -f docker-compose.prod.yml up --build
+```
+
 ## Services Overview
 
 | Service | Port | Description |
 |---------|------|-------------|
 | API | 3000 | REST API for data management |
-| Worker | 8000 | Image processing & Supabase storage |
+| Worker | 8000 | Image processing, Supabase storage, signature verification |
 | Agent | 8001 | AI fraud detection & chat |
 | MCP | 8002 | External tool access for AI agents (SSE mode) |
-| App | 5173 | React frontend application |
+| App | 5173 | React frontend application (served by nginx in production) |
+| Model | — | YOLO signature detection model training |
 
 ## Features
 
@@ -180,8 +228,11 @@ cd app && bun run dev
 
 ### Document Processing
 - OCR text extraction via Roboflow
+- Signature crop extraction from document images
 - Fraud analysis via AI agent
+- Signature verification (auto + manual trigger)
 - Document status tracking
+- FIU/CAP review workflow with findings
 
 ### AI Chat
 - General chat with global context
@@ -190,18 +241,29 @@ cd app && bun run dev
 - Session-based conversation history
 - Auto-generated chat titles via Qwen
 
+### Signature Verification
+- Enroll signatures with OpenCV preprocessing
+- Auto-verify document signatures during analysis
+- Extract physician name from OCR and match enrolled signatures
+- Compare against all reference siamese images, picking the best score
+- Manual verification trigger via API/Worker
+- Status values: `pending`, `verified`, `mismatch`, `needs_review`, `failed`, `no_verified_signature`
+
 ### MCP Integration
 - Query documents with pagination
 - Get document by ID
 - Get fraud analysis
-- Query signatures
+- Get signature verification result
+- Query signatures and get a single signature
+- Get document review findings
 
 ## Database Schema
 
 | Table | Key Fields |
 |-------|-----------|
 | `signatures` | id (nanoid), name, imageUrls (jsonb), status |
-| `documents` | id (nanoid), name, extractedText, fraudAnalysis (jsonb), status |
+| `documents` | id (nanoid), name, extractedText, fraudAnalysis (jsonb), signatureVerification (jsonb), status, approvalStatus, fiuStatus |
+| `review_findings` | id (nanoid), documentId (FK), userId (FK), content, type ("fiu"/"cap"), status |
 | `chat_sessions` | id (nanoid), title, documentId (FK), userId (FK) |
 | `chat_messages` | id (nanoid), sessionId (FK), role ("user"/"assistant"), content |
 
@@ -238,7 +300,7 @@ cd agent && uv run ruff check . && uv run ruff format --check .
 
 ### App
 ```bash
-cd app && bun run lint && bun run format && bun run typecheck
+cd app && bun run lint && bun run format:fix && bun run typecheck
 ```
 
 ### MCP
@@ -269,7 +331,7 @@ Use via header: `X-LLM-Model: minimax-2.5`
 curl -X POST \
   'http://localhost:8000/workers/enroll-signature?signatory_name=Marlon%20Martin' \
   -H 'accept: application/json' \
-  -F 'files=@assets/marlon-martin-signatures/image1.jfif'
+  -F 'files=@path/to/signature-image.jpg'
 ```
 
 ### Test Agent Analyze
@@ -297,8 +359,10 @@ curl -X POST http://localhost:8001/chat \
 | **Database connection failed** | Ensure `DATABASE_URL` is set in `api/.env` |
 | **Supabase upload fails** | Check `SUPABASE_URL` and `SUPABASE_KEY` in worker `.env` |
 | **Agent returns 502** | Ensure Agent service is running on port 8001 |
-| **MCP tools not available** | Use SSE mode: `uv run fastmcp run main.py --transport sse --port 8002` |
+| **MCP tools not available** | Use SSE mode: `uv run fastmcp run main.py --transport sse --host 0.0.0.0 --port 8002` |
 | **Image processing slow** | Ensure sufficient memory; OpenCV is CPU-intensive |
+| **Docker healthcheck fails** | Python slim images use stdlib healthchecks; ensure health endpoints are reachable |
+| **Signature verification trigger fails** | Ensure API has `WORKER_URL` pointing to the worker service |
 
 ### Port Conflicts
 
